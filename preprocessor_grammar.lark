@@ -1,0 +1,44 @@
+// A Lark grammar for preprocessing (Cl|P)ascal programs.
+//
+// Forfeited into the public domain with NO WARRANTY. Read LICENSE for details.
+//
+// This very simple grammar parses a text file into a sequence of chunks that
+// are either:
+//    - Comments: text nested within `{` and `}` delimiters, or within
+//      `(*` and `*)` delimiters. Comments may be nested, but the delimiters
+//      of nested comments must alternate: `{ (* foo *) }` is legal, while
+//      `(* (* bar *) *)` is not.
+//    - Quoted constants: text delimited by `'` (single quotes).
+//    - Everything else.
+//
+// Comments and quoted constants are isolated.
+
+start: (program_text? not_program)* program_text?
+
+program_text: /([^{(']|\((?!\*))+/s
+  // Either:
+  //     [^{(']    A character that can't start a comment or a quoted constant
+  //     \((?!\*)  A '(' that isn't followed by a '*'
+
+?not_program: comment
+            | quoted_constant
+
+?comment: comment_curly_brace
+        | comment_paren_star
+comment_curly_brace: "{" (comment_curly_brace_text? comment_paren_star)* comment_curly_brace_text? "}"
+comment_paren_star: "(*" (comment_paren_star_text? comment_curly_brace)* comment_paren_star_text? "*)"
+
+comment_curly_brace_text: /([^}{(]|\((?!\*))+/s
+  // Either:
+  //     [^}{(]    A character that can't end this comment or start a nested one
+  //     \((?!\*)  A '(' that isn't followed by a '*'
+
+comment_paren_star_text: /(\*(?!\))|\((?!\*)|[^*({])+/s
+  // Either:
+  //     \*(?!\))  A '*' that isn't followed by a ')'
+  //     \((?!\*)  A '(' that isn't followed by a '*'
+  //     [^*({]    A character that can't end this comment or start a nested one
+
+quoted_constant: "'" quoted_constant_text* "'"
+quoted_constant_text: /[^'\n\r]+/
+                    | "''" -> escaped_quote

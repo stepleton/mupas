@@ -1,0 +1,528 @@
+// Lisa Pascal/Clascal grammar.
+//
+// Forfeited into the public domain with NO WARRANTY. Read LICENSE for details.
+//
+// This grammar is adapted from the grammar described via "railroad diagrams"
+// in the Lisa Pascal 3.0 Reference Manual [RM] and the Clascal Syntax Diagrams.
+//
+// This project has been complicated as the original grammar appears to be
+// semantically-aware --- for example, it calls for different parsing judgements
+// depending on whether an identifier is a record type or for something else.
+// Our parser can't really be in the business of keeping track of what gets
+// bound to an identifier, so we have to make use of a "looser" grammar that's
+// less ambiguous.
+//
+// This grammar can't parse Pascal code entirely on its own: it requires
+// comments to be stripped out altogether, and string literals to be replaced
+// by placeholders that employ a special syntax: `!id=123,len=20!`, where 123
+// and 20 are stand-ins for arbitrary non-negative numbers. Both of these
+// requirements are fulfilled by the `preprocessor` module with the help of
+// the simple grammar defined in `preprocessor_grammar.lark`.
+
+start: program
+     | unit
+
+
+// References:
+// [RM] Lisa Pascal 3.0 Reference Manual (1984)
+//      http://bitsavers.org/pdf/apple/lisa/workshop_3.0/Lisa_Pascal_3.0_Reference_Manual_1984.pdf
+// [CSD] Clascal Syntax Diagrams (??)
+//      http://bitsavers.org/pdf/apple/lisa/toolkit_3.0/Package_2_Examples/03_Clascal_Syntax_Diagrams.pdf
+// [LSLP] Language Specification Lisa Pascal (19 Feb 1982)
+//      http://bitsavers.org/pdf/apple/lisa/pascal_monitor/Language_Specification_Lisa_Pascal_Feb82.pdf
+
+
+//// Keywords ////
+
+_ABSTRACT:       "abstract"i
+_AND:            "and"i
+_ARRAY:          "array"i
+_BEGIN:          "begin"i
+_BOOLEAN:        "boolean"i
+_CASE:           "case"i
+_CHAR:           "char"i
+_CONST:          "const"i
+_DEFAULT:        "default"i
+_DIV:            "div"i
+_DO:             "do"i
+_DOWNTO:         "downto"i
+_END:            "end"i
+_EXTERNAL:       "external"i
+_ELSE:           "else"i
+_FILE:           "file"i
+_FOR:            "for"i
+_FORWARD:        "forward"i
+_FUNCTION:       "function"i
+_GOTO:           "goto"i
+_INTEGER:        "integer"i
+_INTERFACE:      "interface"i
+_INTRINSIC:      "intrinsic"i
+_IMPLEMENTATION: "implementation"i
+_IF:             "if"i
+_IN:             "in"i
+_LABEL:          "label"i
+_LONGINT:        "longint"i
+_METHODS:        "methods"i
+_MOD:            "mod"i
+_NIL:            "nil"i
+_NOT:            "not"i
+_OF:             "of"i
+_OR:             "or"i
+_OTHERWISE:      "otherwise"i
+_OVERRIDE:       "override"i
+_PACKED:         "packed"i
+_PROCEDURE:      "procedure"i
+_PROGRAM:        "program"i
+_REAL:           "real"i
+_RECORD:         "record"i
+_REPEAT:         "repeat"i
+_SET:            "set"i
+_SHARED:         "shared"i
+_STRING:         "string"i
+_SUBCLASS:       "subclass"i
+_THEN:           "then"i
+_TYPE:           "type"i
+_TO:             "to"i
+_UNIT:           "unit"i
+_UNTIL:          "until"i
+_USES:           "uses"i
+_WHILE:          "while"i
+_WITH:           "with"i
+_VAR:            "var"i
+
+
+//// RANDOM PUNCTUATION ////
+
+// Decimal points must be surrounded by digits.
+_DECIMAL: /(?<=\d)\.(?=\d)/
+
+// The 'e' in scientific notation must not have whitespace around it.
+_SCIENTIFIC_E: /(?<=[\d])e(?=[\d+-])/i
+
+
+//// [RM] CHAPTER 1 ////
+
+// page 1-2
+IDENTIFIER: LETTER (/_/ | LETTER | DIGIT)*
+DIGIT_SEQUENCE: DIGIT+
+HEX_DIGIT_SEQUENCE: HEXDIGIT+
+
+// page 1-3
+unsigned_integer: (DIGIT_SEQUENCE | "$" HEX_DIGIT_SEQUENCE)
+?sign: sign_plus | sign_minus
+sign_plus: "+"
+sign_minus: "-"
+unsigned_real: unsigned_real_with_fractional_part
+             | unsigned_real_without_fractional_part
+unsigned_real_with_fractional_part: DIGIT_SEQUENCE _DECIMAL DIGIT_SEQUENCE [scale_factor]
+unsigned_real_without_fractional_part: DIGIT_SEQUENCE scale_factor
+scale_factor: _SCIENTIFIC_E [sign] DIGIT_SEQUENCE
+unsigned_number: unsigned_integer | unsigned_real
+signed_number: [sign] unsigned_number
+
+// page 1-4
+// quoted_string_constant: "'" string_character* "'"
+// string_character: /[^'\n\r]/  // NOTE: We also reject newline!
+//                 | "''"
+// quoted_character_constant: "'" string_character "'"
+// NOTE: The ambiguous rules above are disabled in favour of a placeholder
+// injected by the preprocessor. The placeholder is delimited by "!", which is
+// not part of any Pascal token or identifier. It includes the length of the
+// original string constant so that the compiler can correctly identify source
+// code locations.
+quoted_constant: "!id=" DIGIT_SEQUENCE ",len=" DIGIT_SEQUENCE "!"
+
+// page 1-5
+constant_declaration: IDENTIFIER "=" constant ";"
+constant_declarations: constant_declaration+
+constant: signed_constant_identifier
+        | signed_number
+        | quoted_constant
+        // NOTE: See note above quoted_constant above.
+        // | quoted_string_constant     // NOTE: p1-5 calls this "quoted-string"?
+        // | quoted_character_constant  // NOTE: p1-5 calls this "quoted-char"?
+signed_constant_identifier: [sign] IDENTIFIER  // NOTE: see p1-5 about "constant-identifier"
+// TODO: Constants
+
+
+//// [RM] CHAPTER 2 ////
+
+// page 2-1
+block: [label_declaration_part] [constant_declaration_part] [type_declaration_part] [variable_declaration_part] [procedure_and_function_definition_part] statement_part
+label_declaration_part: _LABEL label ("," label)* ";"
+?label: DIGIT_SEQUENCE
+
+// page 2-2
+constant_declaration_part: _CONST constant_declarations
+type_declaration_part: _TYPE type_declarations
+variable_declaration_part: _VAR variable_declarations
+procedure_and_function_declaration_part: procedure_and_function_declarations
+procedure_and_function_declarations: (procedure_declaration | function_declaration)+
+procedure_and_function_definition_part: procedure_and_function_definitions
+procedure_and_function_definitions: (procedure_definition | function_definition)+
+statement_part: compound_statement
+
+
+//// [RM] CHAPTER 3 ////
+// NOTE: the manual identifies concepts of "type-identifier"s for these types,
+// which are names that correspond to types of different sorts, e.g.
+// "pointer-type-identifier" denoting an identifier associated with a type
+// that ultimately has been defined with the "^" prefix. Knowing the type
+// associated with an identifier seems like something that extends beyond the
+// job of a parser to me, so except in a few cases, these specific identifier
+// rules have been deleted and replaced by an "IDENTIFIER" rule under "type".
+
+// page 3-1
+type_declaration: IDENTIFIER "=" type ";"
+type_declarations: type_declaration+
+?type: simple_type
+     | structured_type
+     | pointer_type
+     | type_identifier
+type_identifier: IDENTIFIER  // NOTE: See long comment above.
+
+// page 3-2
+?simple_type: ordinal_type
+            | real_type
+            | string_type
+?real_type: real_type_identifier
+         // Omitting a matcher for random IDENTIFIER aliases to "real", since
+         // this will be fully accounted for by
+         // `real_type ↗ simple_type ↗ type ↘ IDENTIFIER`
+?ordinal_type: subrange_type
+             | enumerated_type
+             | ordinal_type_identifier
+             // Omitting a matcher for random IDENTIFIER ordinal type names, as
+             // this will be fully accounted for by
+             // `ordinal_type ↗ simple_type ↗ type ↘ IDENTIFIER`
+             // `ordinal_type ↗ index_type ↘ IDENTIFIER`
+             // `ordinal_type ↗ set_base_type ↘ IDENTIFIER`
+real_type_identifier: _REAL
+?ordinal_type_identifier: integer_type_identifier
+                        | longint_type_identifier
+                        | char_type_identifier
+                        | boolean_type_identifier
+                        // Omitting a matcher for random IDENTIFIER ordinal type
+                        // names, as this will be fully accounted for by
+                      // `ordinal_type_identifier ↗ tag_field_type ↘ IDENTIFIER`
+integer_type_identifier: _INTEGER
+longint_type_identifier: _LONGINT
+char_type_identifier: _CHAR
+boolean_type_identifier: _BOOLEAN
+
+// page 3-5
+string_type: _STRING "[" size_attribute "]"
+?size_attribute: unsigned_integer
+
+// page 3-6
+enumerated_type: "(" identifier_list ")"
+identifier_list: IDENTIFIER ("," IDENTIFIER)*
+
+// page 3-7
+subrange_type: constant ".." constant
+structured_type: [packed] (array_type | set_type | file_type | record_type)
+               | [packed] class_type  // [CSD] page 2
+?packed: _PACKED
+
+// page 3-8
+array_type: _ARRAY "[" index_type ("," index_type)* "]" _OF type
+?index_type: ordinal_type | type_identifier
+
+// page 3-9
+record_type: _RECORD [field_list] _END
+?field_list: ( field_list_with_fixed_part
+             | field_list_with_variant_part
+             | field_list_with_fixed_and_variant_parts ) ";"?
+field_list_with_fixed_part: fixed_part
+field_list_with_variant_part: variant_part
+field_list_with_fixed_and_variant_parts: fixed_part ";" variant_part
+fixed_part: field_declaration (";" field_declaration)*
+
+// page 3-10
+field_declaration: identifier_list ":" type
+variant_part: _CASE [IDENTIFIER ":"] tag_field_type _OF variant (";" variant)*
+variant: variant_constants ":" "(" [field_list] ")"
+variant_constants: constant ("," constant)*
+?tag_field_type: ordinal_type_identifier
+               | type_identifier
+
+// page 3-11
+set_type: _SET _OF set_base_type
+?set_base_type: ordinal_type | type_identifier
+
+// page 3-12
+file_type: _FILE [_OF type]
+
+// page 3-13
+// We're deviating a bit from the grammar and including the symbols for the
+// built-in non-structured types here.
+pointer_type: "^" base_type
+?base_type: real_type_identifier | ordinal_type_identifier | type_identifier
+
+
+//// [RM] CHAPTER 4 ////
+// NOTE: the qualifiers for pointers and for file buffers are both "^", and
+// it's not the parser's job to know which one we're talking about. Therefore
+// "file_buffer_symbol" and "pointer_object_symbol" have been collapsed to
+// "file_buffer_or_pointer_object_symbol".
+
+// page 4-1
+variable_declaration: identifier_list ":" type ";"
+variable_declarations: variable_declaration+
+// Old [RM] version:
+// variable_reference: variable_identifier qualifier*
+// variable_identifier: IDENTIFIER
+// New [CSD] version, which seems a little sketchy tbh:
+// variable_reference_or_function_call: (IDENTIFIER | function_call | function_method_call) qualifier*
+// OK, I don't like that either. Let's do another one.
+qualified_binding_reference_or_call: IDENTIFIER (qualifier_or_parameter)*
+?qualifier_or_parameter: qualifier
+                       | actual_parameter_list
+
+// page 4-2
+?qualifier: index
+          | field_designator
+          | dereference_or_read_symbol
+index: "[" indices "]"
+indices: expression ("," expression)*
+
+// page 4-4
+field_designator: "." IDENTIFIER
+dereference_or_read_symbol: "^"
+
+
+//// [RM] CHAPTER 5 ////
+
+// page 5-1
+?factor: factor_qualified_binding_reference_or_call
+       | factor_unsigned_constant
+       | factor_set_constructor
+       | "(" expression ")"
+       | factor_address_of
+       | factor_not
+factor_qualified_binding_reference_or_call: qualified_binding_reference_or_call
+factor_set_constructor: set_constructor
+factor_unsigned_constant: unsigned_constant
+factor_address_of: "@" qualified_binding_reference_or_call
+factor_not: _NOT factor
+
+// page 5-2
+// unsigned_constant has IDENTIFIER commented out, as this will have to be
+// accounted for by the IDENTIFIER inside
+// qualified_binding_reference_or_call.
+?unsigned_constant: unsigned_number
+                  | quoted_constant  // But only single-character constants
+                  | nil
+               // | IDENTIFIER  // NOTE: "constant_identifer"; see Ch. 3 note
+nil: _NIL
+?term: term_binary
+     | factor
+term_binary: term term_op factor
+?term_op: "*" -> infix_asterisk
+        | "/" -> infix_slash
+        | _DIV -> infix_div
+        | _MOD -> infix_mod
+        | _AND -> infix_and
+
+// page 5-3
+// Some minor deviation from the published grammar here. Note that the sign in
+// simple_expression_with_sign is just there so that you can negate the first
+// term; it doesn't apply to the entire expression.
+?simple_expression: simple_expression_with_sign
+                  | simple_expression_no_sign
+simple_expression_with_sign: sign simple_expression_no_sign
+?simple_expression_no_sign: simple_expression_no_sign_binary
+                          | term
+simple_expression_no_sign_binary: simple_expression_no_sign simple_expression_no_sign_op term
+?simple_expression_no_sign_op: "+" -> infix_plus
+                             | "-" -> infix_minus
+                             | _OR -> infix_or
+//expression: simple_expression [expression_op simple_expression]
+?expression: expression_binary
+           | simple_expression
+expression_binary: simple_expression expression_op simple_expression
+?expression_op: "=" -> infix_equal
+              | "<" -> infix_lt
+              | ">" -> infix_gt
+              | "<=" -> infix_le
+              | ">=" -> infix_ge
+              | "<>" -> infix_ne
+              | _IN -> infix_in
+
+// page 5-10
+// Not used: qualified_binding_reference_or_call accounts for this.
+// function_call: IDENTIFIER [actual_parameter_list]  // NOTE: "function-identifier"; see Ch. 3 note
+actual_parameter_list: "(" actual_parameters ")"
+// Deviation from the published grammar to eliminate redundancies.
+?actual_parameter: expression
+actual_parameters: actual_parameter ("," actual_parameter)*
+
+// page 5-11
+?set_constructor: "[" member_groups "]"
+?member_group: member_group_single_item
+             | member_group_range
+member_group_single_item: expression
+member_group_range: expression ".." expression
+member_groups: (member_group ("," member_group)*)?
+
+
+//// [RM] CHAPTER 6 ////
+
+// page 6-1
+statement: [label ":"] [structured_statement | simple_statement]
+statements: statement (";" statement)*
+?simple_statement: assignment_statement
+                 | procedure_statement
+                 | goto_statement
+assignment_statement: qualified_binding_reference_or_call ":=" expression
+
+// page 6-2
+// procedure_statement: IDENTIFIER [actual_parameter_list]  // NOTE: "procedure-identifier"; see Ch. 3 note
+procedure_statement: qualified_binding_reference_or_call
+
+// page 6-3
+goto_statement: _GOTO label
+
+// page 6-4
+?structured_statement: compound_statement
+                     | conditional_statement
+                     | repetitive_statement
+                     | with_statement
+compound_statement: _BEGIN statements _END
+?conditional_statement: if_statement
+                      | case_statement
+
+// page 6-5
+if_statement: _IF expression _THEN statement [_ELSE statement]
+case_statement: _CASE expression _OF cases [otherwise_clause] ";"? _END
+
+// page 6-6
+cases: case (";" case)*
+case: constant ("," constant)* ":" statement
+?otherwise_clause: ";" _OTHERWISE statement
+?repetitive_statement: repeat_statement
+                     | while_statement
+                     | for_statement
+
+// page 6-7
+repeat_statement: _REPEAT statements _UNTIL expression
+while_statement: _WHILE expression _DO statement
+
+// page 6-8
+for_statement: _FOR control_variable ":=" initial_value for_direction final_value _DO statement
+?control_variable: IDENTIFIER  // NOTE: "variable-identifier"; see Ch. 3 note
+?for_direction: _TO -> to
+              | _DOWNTO -> downto
+?initial_value: expression
+?final_value: expression
+
+// page 6-10
+with_statement: _WITH record_variable_references _DO statement
+record_variable_references: record_variable_reference ("," record_variable_reference)*
+?record_variable_reference: qualified_binding_reference_or_call
+// NOTE: "record-variable-reference" I interpret as any variable reference
+// yielding a record variable; it's not the parser's business to know what
+// type a variable is. The parser *shouldn't* allow anything that looks
+// like a call here, but we can check that elsewhere.
+
+
+//// [RM] CHAPTER 7 ////
+
+// page 7-1
+procedure_declaration: procedure_heading ";"
+procedure_definition: (procedure_heading | method_procedure_heading) ";" subroutine_body ";"
+procedure_heading: _PROCEDURE IDENTIFIER [formal_parameter_list]
+?subroutine_body: subroutine_body_block
+                | subroutine_body_forward
+                | subroutine_body_external
+subroutine_body_block: block
+subroutine_body_forward: _FORWARD
+subroutine_body_external: _EXTERNAL
+
+// page 7-3
+function_declaration: function_heading ";"
+function_definition: (function_heading | method_function_heading) ";" subroutine_body ";"
+function_heading: _FUNCTION IDENTIFIER [formal_parameter_list] [":" result_type]
+?result_type: ordinal_type_identifier
+            | real_type_identifier
+            | type_identifier  // NOTE: "pointer-type-identifier" [RM,CSD] or "class-type-identifier" [CSD]; see Ch. 3 note
+
+// page 7-6
+formal_parameter_list: "(" formal_parameters ")"
+?formal_parameter: parameter_declaration
+                 | parameter_subroutine
+formal_parameters: formal_parameter (";" formal_parameter)*
+parameter_declaration: [parameter_is_reference] identifier_list ":" parameter_type_identifier  // NOTE: "type_identifier"; see Ch. 3 note
+parameter_subroutine: procedure_heading
+                    | function_heading
+?parameter_type_identifier: real_type_identifier
+                          | ordinal_type_identifier
+                          | type_identifier
+parameter_is_reference: _VAR
+
+
+//// [RM] CHAPTER 8 ////
+
+// page 8-1
+program: _PROGRAM IDENTIFIER ["(" program_parameters ")"] ";" [uses_clause ";"] block "."
+?program_parameters: identifier_list
+uses_clause: _USES identifier_list
+
+
+//// [RM] CHAPTER 9 ////
+
+// page 9-1
+// "Censored" [RM] version:
+// regular_unit: unit_heading ";" interface_part implementation_part _END "."
+// "Full" [LSLP] p83 version:
+unit: unit_heading ";" [intrinsic_clause ";"] interface_part implementation_part _END "."
+?unit_heading: _UNIT IDENTIFIER
+?intrinsic_clause: intrinsic  // Also from [LSLP] p83:
+                 | intrinsic_shared
+intrinsic: _INTRINSIC
+intrinsic_shared: _INTRINSIC _SHARED
+
+// page 9-2
+interface_part: _INTERFACE [uses_clause ";"] [constant_declaration_part] [type_declaration_part] [variable_declaration_part] [procedure_and_function_declaration_part]
+// Old [RM] version:
+// implementation_part: _IMPLEMENTATION [constant_declaration_part] [type_declaration_part] [variable_declaration_part] [procedure_and_function_declaration_part]
+// New [CSD] replacement:
+implementation_part: _IMPLEMENTATION [constant_declaration_part] [type_declaration_part] [variable_declaration_part] [subroutine_part]
+
+
+//// [CSD] ////
+// NOTE: Some rules are prefixed by "clascal_" to avoid conflict with
+// similarly-named Pascal rules. This may not be strictly necessary, but it
+// may require less cleverness.
+
+// page 2
+class_type: _SUBCLASS _OF class_identifier [field_list] method_interface _END
+?class_identifier: IDENTIFIER
+method_interface: method_subroutine_declaration+
+?method_subroutine_declaration: (method_procedure_heading | method_function_heading) [";" (_ABSTRACT | _DEFAULT | _OVERRIDE)] ";"
+
+// page 3
+// Original [CSD] variant
+// function_method_call: (variable_reference_or_function_call | class_identifier) "." function_call
+// procedure_method_call: (variable_reference_or_function_call | class_identifier) "." procedure_statement
+// Replacement avoiding redundant IDENTIFIER rules.
+// function_method_call: variable_reference_or_function_call "." function_call
+// procedure_method_call: variable_reference_or_function_call "." procedure_statement
+// NOTE: diagrams for procedure and function headings omit "procedure" and
+// "function", which seems an error: it doesn't match example clascal source.
+method_procedure_heading: _PROCEDURE (class_identifier ".") IDENTIFIER [formal_parameter_list]
+method_function_heading: _FUNCTION (class_identifier ".") IDENTIFIER [formal_parameter_list] [":" result_type]
+
+// page 4
+subroutine_part: subroutines
+subroutines: (procedure_definition | function_definition | method_block)+
+method_block: _METHODS _OF class_identifier ";" [procedure_and_function_definition_part] [_BEGIN creation_block] _END ";"
+?creation_block: block
+
+
+%import common.DIGIT
+%import common.HEXDIGIT
+%import common.LETTER
+%import common.WS
+
+%ignore WS

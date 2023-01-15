@@ -186,7 +186,7 @@ class ConstantDeclarationPart(AstNode):
 @dataclasses.dataclass
 class TypeDeclarationPart(AstNode):
   """A sequence of type declarations."""
-  types: tuple[str, ...]
+  types: tuple[NameAndType, ...]
 
 
 ### _TransformerVarPartMixin
@@ -298,7 +298,7 @@ class FunctionDefinition(SubroutineDefinition):
 class FunctionHeading(AstNode):
   """Node for function names, parameters, and return types."""
   text: str
-  parameters: tuple['ParameterDeclaration']
+  parameters: FormalParameterList
   result_type: Optional['Type']  # Optional for external declarations.
 
 @dataclasses.dataclass
@@ -323,7 +323,7 @@ class ProcedureDefinition(SubroutineDefinition):
 class ProcedureHeading(AstNode):
   """Node for procedure names, parameters, and return types."""
   text: str
-  parameters: tuple['ParameterDeclaration']
+  parameters: FormalParameterList
 
 @dataclasses.dataclass
 class SubroutineBody(AstNode):

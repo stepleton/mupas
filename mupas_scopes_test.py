@@ -86,3 +86,6 @@ class MupasScopesTest(unittest.TestCase):
       parent.get_scope('/Uncle')
     with self.assertRaisesRegex(KeyError, 'No scope /Parent/C4 within Parent'):
       parent.get_scope('/Parent/C4')
+    parent.del_child('C1')
+    with self.assertRaisesRegex(KeyError, 'No scope /Parent/C1 within Parent'):
+      parent.get_scope('/Parent/C1')

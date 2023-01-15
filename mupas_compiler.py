@@ -143,7 +143,7 @@ class Compiler(abc.ABC):
       self,
       source_text: str,
       filename: Optional[str] = None,
-  ) -> str:
+  ) -> Sequence[str]:
     """Compile a source text into a target-specific assembly format.
 
     Args:
@@ -344,7 +344,7 @@ class Tektronix4050Compiler(Compiler):
     static_allocator: mupas_static.Allocator,
     stack_allocator: mupas_stack.StackAllocator,
     frame_allocator: mupas_stack.FrameAllocator,
-  ) -> str:
+  ) -> Sequence[str]:
     """Tek4050-specific code generation for parsed muPas programs."""
     import t4050_resources
     assert isinstance(static_allocator, t4050_resources.StaticAllocator)
@@ -382,7 +382,8 @@ def main(FLAGS: argparse.Namespace):
     print(__version__)
     print('Targets available:')
     for target, cls in _compiler_classes().items():
-      print(f'\t{target:16}{cls.__doc__.splitlines()[0]}')
+      detail = cls.__doc__.splitlines()[0] if cls.__doc__ is not None else ''
+      print(f'\t{target:16}{detail}')
     return
 
   # Prepare compiler object for the selected target.

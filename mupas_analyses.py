@@ -41,7 +41,7 @@ import mupas_scopes
 import mupas_types
 import pascal_parser
 
-from typing import Any, Collection, Callable, Iterable, Mapping, Sequence, Optional
+from typing import Collection, Mapping, Sequence, Optional
 
 
 # Used by get_type: a mapping from parse tree node types to symbol table
@@ -120,15 +120,14 @@ def get_symbols(
   # simplified type definitions.
 
   # Define useful types for recursive descent helpers.
-  TypeScope, SymbolScope = mupas_scopes.TypeScope, mupas_scopes.SymbolScope
-  DescentState = tuple[TypeScope, SymbolScope]
+  DescentState = tuple[mupas_scopes.TypeScope, mupas_scopes.SymbolScope]
   DescentTodos = list[tuple[mupas_descent.Callback[None, DescentState],
                             pascal_parser.AstNode, DescentState]]
 
   # This helper retrieves an integer constant value from a Constant parse tree
   # node, either as a literal or as a value bound to a constant identifier.
   def get_integer_constant(ast: pascal_parser.Constant,
-                           symbols: SymbolScope) -> int:
+                           symbols: mupas_scopes.SymbolScope) -> int:
     match ast:
       case pascal_parser.ConstantSignedInteger(number=number):
         return number
@@ -146,9 +145,13 @@ def get_symbols(
   # This helper binds values to constant identifiers in constant declarations.
   # Life is easier for us because in Lisa Pascal, according to the grammar,
   # the right-hand sides of constant declarations can only be strings, numbers,
-  # or identifiers of other constants.
-  def bind_constant_declarations(ast: pascal_parser.ConstantDeclarationPart,
-                                 state: DescentState, _):
+  # or identifiers of other constants. The ast argument is typed as an AstNode
+  # for compatibility with mupas_descent.Scan(), though we should only use it
+  # with ConstantDeclarationPart AST nodes (and assert that this is so).
+  def bind_constant_declarations(
+      ast: pascal_parser.AstNode, state: DescentState, todos: DescentTodos):
+    assert isinstance(ast, pascal_parser.ConstantDeclarationPart)
+    del todos  # Unused
     types, symbols = state
     for declaration in ast.declarations:
       name, value = declaration.text, declaration.value
@@ -176,8 +179,11 @@ def get_symbols(
   # numeric constants for enumerated types.
   #
   # The name argument is the symbol name and is used for error messages.
-  def get_type(name: str, types: TypeScope, symbols: SymbolScope,
-               the_type: pascal_parser.Type) -> mupas_types.Type:
+  def get_type(
+      name: str,
+      types: mupas_scopes.TypeScope, symbols: mupas_scopes.SymbolScope,
+      the_type: pascal_parser.Type,
+  ) -> mupas_types.Type:
     if isinstance(the_type, tuple(_SIMPLE_TYPE_MAPPING)):
       return _SIMPLE_TYPE_MAPPING[type(the_type)]
     match the_type:
@@ -199,15 +205,15 @@ def get_symbols(
         dims = len(ind_types)
         if dims == 1:
           return mupas_types.Array1d(
-              index_typeinfo=get_type(
+              index_typeinfo=get_ordinal_type(
                   '<array index>', types, symbols, ind_types[0]),
               value_typeinfo=get_type(
                   '<array value type>', types, symbols, val_type))
         elif dims == 2:
           return mupas_types.Array2d(
-              row_index_typeinfo=get_type(
+              row_index_typeinfo=get_ordinal_type(
                   '<array row index>', types, symbols, ind_types[0]),
-              col_index_typeinfo=get_type(
+              col_index_typeinfo=get_ordinal_type(
                   '<array col index>', types, symbols, ind_types[1]),
               value_typeinfo=get_type(
                   '<array value type>', types, symbols, val_type))
@@ -222,17 +228,51 @@ def get_symbols(
           f'An unexpected parse tree node of type {type(the_type)} is the '
           f'type for the symbol {name} in the scope {symbols.path}')
 
+  # This wrapper to get_type guarantees that the resulting type will be an
+  # ordinal type. When we use it, we already know this will be so: this is
+  # just for mypy.
+  def get_ordinal_type(
+      name: str,
+      types: mupas_scopes.TypeScope, symbols: mupas_scopes.SymbolScope,
+      the_type: pascal_parser.Type,
+  ) -> mupas_types.Ordinal:
+    result = get_type(name, types, symbols, the_type)
+    assert isinstance(result, mupas_types.Ordinal)
+    return result
+
+  # This wrapper to get_type guarantees that the resulting type will be a
+  # scalar number type. When we use it, we already know this will be so: this
+  # is just for mypy.
+  def get_scalar_number_type(
+      name: str,
+      types: mupas_scopes.TypeScope, symbols: mupas_scopes.SymbolScope,
+      the_type: pascal_parser.Type,
+  ) -> mupas_types.ScalarNumber:
+    result = get_type(name, types, symbols, the_type)
+    assert isinstance(result, mupas_types.ScalarNumber)
+    return result
+
   # This scan() callback binds type definitions within the type scope.
-  def bind_type_declarations(ast: pascal_parser.TypeDeclarationPart,
-                             state: DescentState, _):
+  # The ast argument is typed as an AstNode for compatibility with
+  # mupas_descent.Scan(), though we should only use it with
+  # TypeDeclarationPart AST nodes (and assert that this is so).
+  def bind_type_declarations(
+      ast: pascal_parser.AstNode, state: DescentState, todos: DescentTodos):
+    assert isinstance(ast, pascal_parser.TypeDeclarationPart)
+    del todos  # Unused
     types, symbols = state
     for declaration in ast.types:
       name, the_type = declaration.text, declaration.the_type
       types[name] = get_type(name, types, symbols, the_type)
 
   # This scan() callback adds variable declarations to the symbol table.
-  def bind_variable_declarations(ast: pascal_parser.VariableDeclarationPart,
-                                 state: DescentState, _):
+  # The ast argument is typed as an AstNode for compatibility with
+  # mupas_descent.Scan(), though we should only use it with
+  # VariableDeclarationPart AST nodes (and assert that this is so).
+  def bind_variable_declarations(
+      ast: pascal_parser.AstNode, state: DescentState, todos: DescentTodos):
+    assert isinstance(ast, pascal_parser.VariableDeclarationPart)
+    del todos  # Unused
     types, symbols = state
     for declaration in ast.declarations:
       name, the_type = declaration.text, declaration.the_type
@@ -241,8 +281,13 @@ def get_symbols(
           typeinfo=get_type(name, types, symbols, the_type))
 
   # This scan() callback adds subroutine parameters to the symbol table.
-  def bind_subroutine_parameters(ast: pascal_parser.FormalParameterList,
-                                 state: DescentState, _):
+  # The ast argument is typed as an AstNode for compatibility with
+  # mupas_descent.Scan(), though we should only use it with
+  # FormalParameterList AST nodes (and assert that this is so).
+  def bind_subroutine_parameters(
+      ast: pascal_parser.AstNode, state: DescentState, todos: DescentTodos):
+    assert isinstance(ast, pascal_parser.FormalParameterList)
+    del todos  # Unused
     types, symbols = state
     for declaration in ast.parameters:
       name, the_type = declaration.text, declaration.the_type
@@ -255,11 +300,16 @@ def get_symbols(
             definition=declaration, typeinfo=typeinfo)
 
   # This scan() callback adds subroutine definitions to the symbol table.
+  # The ast argument is typed as an AstNode for compatibility with
+  # mupas_descent.Scan(), though we should only use it with
+  # ProcedureAndFunctionDefinitionPart AST nodes (and assert that this is so).
   def bind_subroutine_definitions(
-      ast: pascal_parser.ProcedureAndFunctionDefinitionPart,
-      state: DescentState, todos: DescentTodos):
+      ast: pascal_parser.AstNode, state: DescentState, todos: DescentTodos):
+    assert isinstance(ast, pascal_parser.ProcedureAndFunctionDefinitionPart)
     types, symbols = state
     for subroutine in ast.subroutines:
+      assert isinstance(subroutine, (  # No other type of subroutine right now.
+          pascal_parser.ProcedureDefinition, pascal_parser.FunctionDefinition))
       name = subroutine.heading.text
       # Collecting subroutine parameters in this scope gives us bindings for
       # enumerated type symbols in this scope as well.
@@ -276,26 +326,33 @@ def get_symbols(
             definition=subroutine,
             typeinfo=mupas_types.Procedure(parameters=parameters))
       elif isinstance(subroutine, pascal_parser.FunctionDefinition):
+        assert subroutine.heading.result_type is not None  # true for muPas.
         symbols[name] = mupas_scopes.SubroutineSymbol(
             definition=subroutine, typeinfo=mupas_types.Function(
-                parameters=parameters, return_typeinfo=get_type(
+                parameters=parameters, return_typeinfo=get_scalar_number_type(
                     name, types, symbols, subroutine.heading.result_type)))
       # Create nested scopes for this subroutine and schedule processing of
       # those scopes.
-      nested_types = TypeScope(name, parent=types)
-      nested_symbols = SymbolScope(name, parent=symbols)
+      nested_types = mupas_scopes.TypeScope(name, parent=types)
+      nested_symbols = mupas_scopes.SymbolScope(name, parent=symbols)
       nested_state = (nested_types, nested_symbols)
       # Append in reverse order since the scan() queue is a LIFO.
+      assert isinstance(subroutine, (  # Didn't we already do this? mypy...
+          pascal_parser.ProcedureDefinition, pascal_parser.FunctionDefinition))
+      assert isinstance(subroutine.body, pascal_parser.SubroutineBodyBlock)
       todos.append((descend_into_block, subroutine.body.block, nested_state))
       if subroutine.heading.parameters is not None:
         todos.append((bind_subroutine_parameters,
                       subroutine.heading.parameters, nested_state))
 
   # This scan() callback processes muPas blocks, dispatching handling of those
-  # blocks to the specialised handlers defined above.
+  # blocks to the specialised handlers defined above. The ast argument is
+  # typed as an AstNode for compatibility for mupas_descent.scan(), though we
+  # should only use it with Block AST nodes (and assert that this is so).
   def descend_into_block(
-      ast: pascal_parser.Block,
+      ast: pascal_parser.AstNode,
       state: DescentState, todos: DescentTodos):
+    assert isinstance(ast, pascal_parser.Block)
     types, symbols = state
     # Append in reverse order since the scan() queue is a LIFO.
     if ast.procedure_and_function_definition_part is not None:
@@ -312,8 +369,8 @@ def get_symbols(
                     ast.constant_declaration_part, state))
 
   # At last, analyse this program!
-  root_types = TypeScope(name=ast.text)
-  root_symbols = SymbolScope(name=ast.text)
+  root_types = mupas_scopes.TypeScope(name=ast.text)
+  root_symbols = mupas_scopes.SymbolScope(name=ast.text)
   root_state = (root_types, root_symbols)
   if extras is not None:
     for name, symbol in extras.items(): root_symbols[name] = symbol
@@ -324,7 +381,7 @@ def get_symbols(
 
 def get_call_graph(
     ast: pascal_parser.Program,
-    symbols: mupas_scopes.SymbolScope,
+    symbols: mupas_scopes.SymbolScopeProtocol,
 ) -> Mapping[str, Collection[str]]:
   """Construct a static call graph for a muPas program.
 
@@ -346,9 +403,9 @@ def get_call_graph(
     callers etc.) do not appear in the mapping.
   """
   # Convenient type abbreviations.
-  SymbolScope = mupas_scopes.SymbolScope
-  DescentTodos = list[tuple[mupas_descent.Callback[None, SymbolScope],
-                            pascal_parser.AstNode, SymbolScope]]
+  DescentTodos = list[
+      tuple[mupas_descent.Callback[None, mupas_scopes.SymbolScope],
+            pascal_parser.AstNode, mupas_scopes.SymbolScope]]
 
   # Check whether we have the correct symbol table for this program.
   if ast.text != symbols.name: raise ValueError(
@@ -365,34 +422,40 @@ def get_call_graph(
   # subroutine, it updates the call graph to note who is calling whom.
   def descend_into_statements(
       ast: pascal_parser.AstNode,
-      symbols: SymbolScope, todos: DescentTodos):
+      state: mupas_scopes.SymbolScope, todos: DescentTodos):
 
     # First, note anything here that looks like a subroutine call.
     if isinstance(ast, pascal_parser.BindingReferenceOrCall):
-      if isinstance(symbols[ast.binding], mupas_scopes.ExtensionSymbol):
+      if isinstance(state[ast.binding], mupas_scopes.ExtensionSymbol):
         pass  # An extension; nothing for us to do. The generator deals with it.
-      elif isinstance(symbols[ast.binding].typeinfo, mupas_types.Subroutine):
-        called_path = symbols.itempath(ast.binding)
-        call_graph[symbols.path].add(called_path)
-        to_process.append((called_path, symbols[ast.binding].definition.body))
+      elif isinstance(state[ast.binding], mupas_scopes.SubroutineSymbol):
+        called_path = state.itempath(ast.binding)
+        call_graph[state.path].add(called_path)
+        definition = state[ast.binding].definition
+        assert isinstance(definition, (pascal_parser.ProcedureDefinition,
+                                       pascal_parser.FunctionDefinition))
+        to_process.append((called_path, definition.body))
       # TODO: Place other symbols with blocks here if you extend the language.
 
     # Recursing into the program in a way that avoids mistaking function return
     # value assignment for a procedure call.
     if isinstance(ast, pascal_parser.StatementAssignment):
-      todos.append((descend_into_statements, ast.value, symbols))
+      todos.append((descend_into_statements, ast.value, state))
     else:
-      todos.extend((descend_into_statements, kid, symbols)
+      todos.extend((descend_into_statements, kid, state)
                    for kid in reversed(mupas_descent.children(ast)))
 
   # Iterate until we run out of to_process contents.
   while to_process:
     path, ast_with_block = to_process.pop(0)
+    assert isinstance(ast_with_block, (
+        pascal_parser.Program, pascal_parser.SubroutineBodyBlock))
     if path not in call_graph:  # Skip if we've already processed this path.
       call_graph[path] = set()  # Get ready to build this call graph entry.
       scope = symbols.get_scope(path)  # Get scope for this path.
       statements = ast_with_block.block.statement_part
-      mupas_descent.scan(descend_into_statements, statements, scope)
+      mupas_descent.scan(  # type: ignore  # mypy bug?
+          descend_into_statements, statements, scope)
 
   return call_graph
 
@@ -479,7 +542,9 @@ def add_static_resources(
   # First, assign storage resources for constant strings.
   for path in rev_call_graph:
     for v in symbols.get_scope(path).bindings.values():
-      if is_string_constant(v): v.storage = allocator.allocate(v.typeinfo)
+      if is_string_constant(v):
+        assert isinstance(v, mupas_scopes.ConstantStringSymbol)  # mypy...
+        v.storage = allocator.allocate(v.typeinfo)
 
   # Helper: is a Symbol a string or array variable?
   def is_string_or_array_variable(symbol: mupas_scopes.Symbol) -> bool:
@@ -559,6 +624,7 @@ def add_static_resources(
       for root in roots:
         for v in symbols.get_scope(root).bindings.values():
           if is_string_or_array_variable(v):
+            assert isinstance(v, mupas_scopes.VariableSymbol)  # mypy...
             resources.append(resource := allocator.allocate(v.typeinfo))
             v.storage = resource
 
@@ -634,7 +700,7 @@ def add_stack_resources(
   # structure depicted above is built.
   def allocate_stack_frame_and_add_storage_to_variables(
       typeinfo: mupas_types.Subroutine,
-      symbols: mupas_scopes.SymbolScope,
+      symbols: mupas_scopes.SymbolScopeProtocol,
   ) -> mupas_stack.Frame:
     # Assemble list of resources for the stack frame.
     frame_types: list[mupas_types.Type] = []
@@ -676,7 +742,7 @@ def add_stack_resources(
 
   # Helper: recurse into subroutines and nested subroutines, allocating stack
   # resources for local scalar numeric values within.
-  def rec(symbols: mupas_scopes.SymbolScope):
+  def rec(symbols: mupas_scopes.SymbolScopeProtocol):
     for k, v in symbols.bindings.items():
       if is_subroutine(v):
         assert isinstance(v, mupas_scopes.SubroutineSymbol)  # mypy bug

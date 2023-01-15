@@ -26,7 +26,7 @@ import t4050_generator
 import t4050_resources
 import t4050_stdlib_extensions
 
-from typing import Optional
+from typing import Collection, Mapping, Optional, Sequence
 
 
 ###############
@@ -46,17 +46,18 @@ class AllocatorsEtc:
   static: Optional[t4050_resources.StaticAllocator] = None
   stack: Optional[t4050_resources.StackAllocator] = None
   frame: Optional[t4050_resources.FrameAllocator] = None
-  rev_call_graph: Optional[dict[str, set[str]]] = None
+  rev_call_graph: Optional[Mapping[str, Collection[str]]] = None
 
 
 def parse_and_allocate_symbols(
     source_text: str, allocators_etc: Optional[AllocatorsEtc] = None,
 ) -> tuple[pascal_parser.AstNode, mupas_scopes.SymbolScope,
-           t4050_resources.Frame, dict[int, str]]:
+           t4050_resources.Frame, Sequence[str]]:
   """Pre code-generation compile steps for (a part/all) of the parse tree."""
   # Parse the program. We won't bother with checks.
   preprocessed, quoted_constants = preprocessor.preprocess(source_text)[0:2]
   ast = pascal_parser.parse(preprocessed)
+  assert isinstance(ast, pascal_parser.Program)  # No units, only programs.
 
   # Build symbol table, call graph, and reverse transitive call graph.
   extensions = t4050_stdlib_extensions.extensions()

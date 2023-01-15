@@ -11,11 +11,17 @@ import preprocessor
 import pascal_parser
 import t4050_resources
 
+from typing import Sequence
 
-def parse_and_get_quoted_constants(source_text: str) -> pascal_parser.AstNode:
+
+def parse_and_get_quoted_constants(
+    source_text: str,
+) -> tuple[pascal_parser.Program, Sequence[str]]:
   """Convert source text into an abstract syntax tree."""
   pp_source, quoted_constants, _ = preprocessor.preprocess(source_text)
-  return pascal_parser.parse(pp_source), quoted_constants
+  ast = pascal_parser.parse(pp_source)
+  assert isinstance(ast, pascal_parser.Program)  # No units, only programs.
+  return ast, quoted_constants
 
 
 class MupasAnalysesTest(unittest.TestCase):

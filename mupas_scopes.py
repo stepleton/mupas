@@ -24,24 +24,71 @@ the `add_static_resources` and `add_stack_resources` functions in
 `mupas_analyses`.
 """
 
+import contextlib
 import dataclasses
 
 import mupas_types
 import mupas_resources
 import pascal_parser
 
-from typing import Generic, Optional, TypeVar
+from typing import Generic, Iterator, Optional, Protocol, TypeVar
 
 
 T = TypeVar('T')
-TScope = TypeVar('TScope', bound='Scope')
-TBiScope = TypeVar('TBiScope', bound='BiScope')
 
 
 ### Generic classes for nested scopes.###
 
 
-class Scope(Generic[T]):
+class ScopeProtocol(Protocol[T]):
+  name: str
+  path: str
+  parent: Optional['ScopeProtocol[T]']
+  bindings: dict[str, T]
+
+  def __setitem__(self, name: str, item: T):
+    ...
+
+  def __getitem__(self, name: str) -> T:
+    ...
+
+  def __contains__(self, name: str) -> bool:
+    ...
+
+  def __delitem__(self, name: str):
+    ...
+
+  def itempath(self, name: str) -> str:
+    ...
+
+  def _itempath_rec(self, name: str, original_path: str) -> str:
+    ...
+
+  def itemhops(self, name: str) -> int:
+    ...
+
+  def _itemhops_rec(self, name: str, original_path: str) -> int:
+    ...
+
+
+class BiScopeProtocol(ScopeProtocol[T]):
+  children: dict[str, 'BiScopeProtocol[T]']
+
+  @contextlib.contextmanager
+  def nest(self, name: str) -> Iterator['BiScopeProtocol[T]']:
+    ...
+
+  def add_child(self, name: str, child: 'BiScopeProtocol[T]'):
+    ...
+
+  def del_child(self, name: str):
+    ...
+
+  def get_scope(self, path: str) -> 'BiScopeProtocol[T]':
+    ...
+
+
+class Scope(ScopeProtocol[T]):
   """A generic base class for scopes.
 
   Attributes:
@@ -56,10 +103,10 @@ class Scope(Generic[T]):
   """
   name: str
   path: str
-  parent: Optional[TScope]
+  parent: Optional[ScopeProtocol[T]]
   bindings: dict[str, T]
 
-  def __init__(self, name: str, parent: Optional[TScope] = None):
+  def __init__(self, name: str, parent: Optional[ScopeProtocol] = None):
     if '/' in name: raise ValueError(
         f'Scope name "{name}" includes illegal character \'/\'')
     self.name = name
@@ -100,6 +147,7 @@ class Scope(Generic[T]):
       ) from None
 
   def itempath(self, name: str) -> str:
+    """Retrieve the Unix-like path to an item in this scope."""
     try:
       return self._itempath_rec(name, self.path)
     except KeyError as e:
@@ -114,6 +162,7 @@ class Scope(Generic[T]):
       return self.parent._itempath_rec(name, original_path)
 
   def itemhops(self, name: str) -> int:
+    """If name is in the Nth parent scope to this scope, return N."""
     try:
       return self._itemhops_rec(name, self.path)
     except KeyError as e:
@@ -128,7 +177,7 @@ class Scope(Generic[T]):
       return 1 + self.parent._itemhops_rec(name, original_path)
 
 
-class BiScope(Scope[T]):
+class BiScope(Scope[T], BiScopeProtocol[T]):
   """A generic scope class with bidirectional references.
 
   A BiScope is just like a Scope, except parent scopes have a dict that
@@ -137,27 +186,42 @@ class BiScope(Scope[T]):
   Attributes:
     children: Dict of child scopes, indexed by their names.
   """
-  children: dict[str, TBiScope]
+  children: dict[str, BiScopeProtocol[T]]
 
-  def __init__(self, name: str, parent: Optional[TBiScope] = None):
+  def __init__(self, name: str, parent: Optional[BiScopeProtocol[T]] = None):
     super().__init__(name, parent)
     self.children = {}
     if parent is not None: parent.add_child(name, self)
 
-  def add_child(self, name: str, child: TBiScope):
+  @contextlib.contextmanager
+  def nest(self, name: str) -> Iterator[BiScopeProtocol[T]]:
+    """Creates a context where a new BiScope uses this scope as a parent."""
+    bi_scope: BiScopeProtocol[T] = BiScope(name=name, parent=self)
+    try:
+      yield bi_scope
+    finally:
+      self.del_child(name)
+
+  def add_child(self, name: str, child: BiScopeProtocol[T]):
     """Add a child to this scope. Does not ensure this object is its parent."""
     if name in self.children: raise KeyError(
       f'{self.path} already has a child scope called {name}')
     self.children[name] = child
 
-  def get_scope(self, path: str):
+  def del_child(self, name: str):
+    """Deletes a child from this scope."""
+    if name not in self.children: raise KeyError(
+      f'{self.path} has no child scope called {name} to delete')
+    del self.children[name]
+
+  def get_scope(self, path: str) -> BiScopeProtocol[T]:
     """Retrieve a scope by its path. Path must start with this scope."""
     # This implementation is a little cheesy. All paths passed as path will be
     # treated as relative paths even if they begin with '/'.
     parts = [p for p in path.split('/') if p]
     try:
       if parts.pop(0) != self.name: raise KeyError
-      scope = self
+      scope: BiScopeProtocol[T] = self
       for p in parts:
         scope = scope.children[p]
       return scope
@@ -168,8 +232,10 @@ class BiScope(Scope[T]):
 ### Instantiations of nested scopes ###
 
 
-class TypeScope(Scope[mupas_types.Type]):
-  """Nested table of types in muPas programs."""
+#class TypeScope(Scope[mupas_types.Type]):
+#  """Nested table of types in muPas programs."""
+TypeScope = Scope[mupas_types.Type]
+TypeScopeProtocol = ScopeProtocol[mupas_types.Type]
 
 
 ### Symbol table values ###
@@ -251,5 +317,7 @@ class ExtensionSymbol(Symbol):
   """
 
 
-class SymbolScope(BiScope[Symbol]):
-  """Nested symbol table for muPas programs."""
+#class SymbolScope(BiScope[Symbol]):
+#  """Nested symbol table for muPas programs."""
+SymbolScope = BiScope[Symbol]
+SymbolScopeProtocol = BiScopeProtocol[Symbol]

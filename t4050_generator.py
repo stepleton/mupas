@@ -1011,18 +1011,18 @@ def exp_expression_leaf(
     case pascal_parser.UnsignedInteger(number=number):
       # Unsigned integer literals: 1234
       return t4050_compiled.Expression(
-          typeinfo=mupas_types.Integer(), access=str(number))
+          typeinfo=mupas_types.Integer(), access=str(number), is_literal=True)
     case pascal_parser.UnsignedReal(number=number):
       # Unsigned real number literals: 1.2e34
       return t4050_compiled.Expression(
-          typeinfo=mupas_types.Real(), access=str(number))
+          typeinfo=mupas_types.Real(), access=str(number), is_literal=True)
     case pascal_parser.QuotedConstant(index=index):
       # 'String literals'.
       value = quoted_constants[index]
       literal = '"' + value.replace('"', '""') + '"'  # 4050 BASIC escaping.
       return t4050_compiled.Expression(
           typeinfo=mupas_types.String(length=len(value)),
-          access=literal, is_quoted_string_literal=True)
+          access=literal, is_literal=True)
     case pascal_parser.BindingReferenceOrCall():
       # Variables, constants, function calls.
       return exp_binding_reference_or_call(
@@ -1047,7 +1047,8 @@ def exp_binding_reference_or_call(
           mupas_scopes.ConstantRealSymbol(typeinfo=typeinfo, value=value)):
       # Numeric constants.
       return t4050_compiled.Expression(
-          typeinfo=symbol.typeinfo, access=str(value))
+          typeinfo=symbol.typeinfo, access=str(value),
+          is_literal=True)  # Because `access` is a BASIC literal.
     case mupas_scopes.ConstantStringSymbol(typeinfo=typeinfo, storage=storage):
       # String constants.
       # TODO: Implement subscripting of string constants.
@@ -1055,7 +1056,8 @@ def exp_binding_reference_or_call(
       variable = storage.variable_name
       return t4050_compiled.Expression(
           typeinfo=symbol.typeinfo, access=variable,
-          can_be_lhs=False, is_unqualified_variable=True)
+          can_be_lhs=False, is_unqualified_variable=True,
+          is_literal=False)  # Because `access` isn't a BASIC literal.
     case mupas_scopes.SubroutineSymbol():
       # Calls to functions.
       return exp_function_call(
@@ -1186,7 +1188,8 @@ def exp_expression_unary(
   compiled_arg = exp_expression(
       ast.expression, symbols, frame, quoted_constants)
   # Any expression we return is no longer an unqualified variable or suitable
-  # for use as an assignment left-hand side.
+  # for use as an assignment left-hand side. But if it was a BASIC literal
+  # before, it may still be a literal: see below.
   compiled_arg.can_be_lhs = False
   compiled_arg.is_unqualified_variable = False
 
@@ -1207,6 +1210,7 @@ def exp_expression_unary(
       compiled_arg.typeinfo = update_base_typeinfo(
           enclosing_typeinfo=compiled_arg.typeinfo,
           new_base_typeinfo=mupas_types.Boolean())
+      compiled_arg.is_literal = False  # No longer a BASIC literal.
       return compiled_arg
 
     # A negation operation converts booleans, chars, enumerations, and ranges
@@ -1216,7 +1220,18 @@ def exp_expression_unary(
       if not isinstance(base_t, mupas_types.ScalarNumber): raise RuntimeError(
           f"A value of type {type(compiled_arg.typeinfo)} can't be negated "
           'for the 4050 BASIC target with the unary - operator')
-      compiled_arg.access = f'(-({compiled_arg.access}))'
+
+      if compiled_arg.is_literal:
+        # For literal values, we can do the negation in Python, and the result
+        # is still a BASIC literal. We try int first to avoid rounding errors.
+        try:
+          compiled_arg.access = str(-int(compiled_arg.access))
+        except ValueError:
+          compiled_arg.access = str(-float(compiled_arg.access))
+      else:
+        # For non-literal values, we're more conservative in our negation.
+        compiled_arg.access = f'(-({compiled_arg.access}))'
+
       if not isinstance(base_t, (mupas_types.Real, mupas_types.Longint)):
         compiled_arg.typeinfo = update_base_typeinfo(
             enclosing_typeinfo=compiled_arg.typeinfo,

@@ -35,6 +35,7 @@ or to know whether they work like functions or procedures.
 
 import itertools
 import re
+import textwrap
 import warnings
 
 import mupas_scopes
@@ -173,6 +174,7 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
           'Tan', 'TAN({0})', [mupas_types.ScalarNumber()], _real),
 
       # Matrix math operations.
+      'MatrixFill': t4050_extensions.ExtensionProcedureSymbol(_matrix_fill),
       'MatrixIdentity': _extension_procedure(
           'MatrixIdentity', 'CAL "IDN",{0}',
           [_Constraints(t4050_types.Array2d(None, None, mupas_types.Real()),
@@ -803,7 +805,9 @@ def _extension_procedure(
     # first argument to see if it looks like an I/O address. If it does, save
     # the I/O address information in a form suitable for BASIC.
     io, ioprimary = '', ''
-    if len(args) == len(arg_typeinfo) + 1 and args[0].is_quoted_string_literal:
+    if (len(args) == len(arg_typeinfo) + 1 and
+        isinstance(args[0].typeinfo, mupas_types.String) and
+        args[0].is_literal):
       io, ioprimary = _collect_io_address(
           name, args[0], want_io, want_ioprimary)
     # We got an I/O address in the first argument, so delete it from the
@@ -1274,6 +1278,43 @@ def _array_pair_scalar_function(
 
   # Return the new extension.
   return t4050_extensions.ExtensionFunctionSymbol(extension=extension)
+
+
+def _matrix_fill(
+    args: list[t4050_compiled.Expression],
+) -> t4050_compiled.Statement:
+  """Extension for MatrixFill."""
+  # There's a lot of argument checking for us to do first.
+  if len(args) < 1: raise Error(  # At least one parameter is required.
+      'MatrixFill takes a matrix to fill and a sequence of enough numeric '
+      'literals and constants to fill the matrix')
+  dest = args[0]
+  _check_expression_compatibility(  # First parameter must be an array.
+      _Constraints(
+          t4050_types.Union(
+              t4050_types.Array1d(None, mupas_types.ScalarNumber()),
+              t4050_types.Array2d(None, None, mupas_types.ScalarNumber())),
+          is_mutable_variable=True), dest)
+  assert isinstance(dest.typeinfo, (mupas_types.Array1d, mupas_types.Array2d))
+  num_elements = array_num_elements(dest.typeinfo)
+  if len(args) - 1 != num_elements: raise Error(  # We need enough parameters.
+      'MatrixFill was asked to fill a matrix of size {num_elements} with '
+      '{len(args) - 1} items')
+  for element in args[1:]:  # Parameters must be the correct type.
+    _check_expression_compatibility(dest.typeinfo.value_typeinfo, element)
+    if not element.is_literal: raise Error(
+        'MatrixFill can only fill a matrix with literal numeric values or '
+        'numeric value constants')
+
+  # At last we can build the code.
+  literals = ' '.join(element.access for element in args[1:])
+  label = f'_MatrixFill_{hash(literals) % 2**32:X}'
+  code = ([f'{label}:'] +
+          ['      DAT ' + numbers.replace(' ', ',')
+           for numbers in textwrap.wrap(literals, width=60)] +
+          [f'      RES %{label}%',
+           f'      REA {dest.access}'])
+  return t4050_compiled.Statement(code=code, stack_growth=0)
 
 
 def _matrix_invert(

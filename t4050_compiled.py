@@ -63,8 +63,7 @@ class Expression:
         constant expressions that aren't string literals (i.e. unqualified
         references to strings defined in a CONST definition) do receive a True
         value here, although `can_be_lhs` is False in those cases.
-    is_quoted_string_literal: Whether the BASIC code for the expression is a
-        quoted string literal.
+    is_literal: Whether the BASIC code for the expression is a BASIC literal.
   """
   # Ideas for the future:
   # - Carry information necessary for more efficient use of parentheses in
@@ -84,7 +83,7 @@ class Expression:
   can_be_lhs: bool = False
   is_unqualified_variable: bool = False
 
-  is_quoted_string_literal: bool = False
+  is_literal: bool = False
 
 
 def chain_statements(statements: Sequence[Statement]) -> Statement:

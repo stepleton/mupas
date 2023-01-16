@@ -286,7 +286,7 @@ class T4050GeneratorTest(unittest.TestCase):
     comp = t4050_generator.exp_expression(
         unary, symbols, frame, quoted_constants)
     self.assertIsInstance(comp.typeinfo, mupas_types.Integer)
-    self.assertEqual(comp.access, '(-(123))')
+    self.assertEqual(comp.access, '-123')
     self.assertFalse(comp.compute)
 
   def test_unary_logical_inversion_expression(self):
@@ -1593,6 +1593,8 @@ class T4050GeneratorTest(unittest.TestCase):
     """Can we compile a program that uses extensions?"""
     source = """\
         PROGRAM ExtensionUser;
+        CONST
+          neg = -1;
         VAR
           str: String[20];
           mx1, mx2: ARRAY [1..2, 1..4] OF Real;
@@ -1623,6 +1625,8 @@ class T4050GeneratorTest(unittest.TestCase):
           MatrixTranspose(mx4, mx4);
           DrawArrays(mx2, mx3);
           DrawArrays('@16', mx3, mx2);
+          MatrixFill(mx2,  1.1, 2.2, 3.3, 4.4,
+                          -neg, neg, 7.7, 8.8);
         END."""
     allocators_etc = AllocatorsEtc()
     ast, symbols, frame, quoted_constants = parse_and_allocate_symbols(
@@ -1640,6 +1644,8 @@ class T4050GeneratorTest(unittest.TestCase):
     mx2_name = symbols["mx2"].storage.variable_name
     mx3_name = symbols["mx3"].storage.variable_name
     mx4_name = symbols["mx4"].storage.variable_name
+    # Another string we'll need:
+    matrix_hash = f'{hash("1.1 2.2 3.3 4.4 1 -1 7.7 8.8") % 2**32:X}'
     # Now compare generated code against the "assembly" output we expect.
     self.assertEqual(
         [c.strip() for c in code],
@@ -1682,6 +1688,10 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{mx4_name}=TRN {mx4_name}',   # Second MatrixTranspose statement.
          f'DRA {mx2_name},{mx3_name}',   # The DrawArrays statement.
          f'DRA @16:{mx3_name},{mx2_name}',   # Second DrawArrays statement.
+         f'_MatrixFill_{matrix_hash}:',  # MatrixFill statement label.
+         'DAT 1.1,2.2,3.3,4.4,1,-1,7.7,8.8',   # MatrixFill statement data.
+         f'RES %_MatrixFill_{matrix_hash}%',   # MatrixFill statement RESTORE.
+         f'REA {mx2_name}',         # MatrixFill statement READ.
          '_Exit_ExtensionUser:',    # Program exit label.
          f'DEL {str_name}',         # Delete the string variable.
          f'DEL {mx1_name}',         # Delete matrix mx1.

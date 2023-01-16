@@ -38,8 +38,8 @@ if INC is 10:
 
 Unless it's a directive, anything following a label definition and/or initial
 whitespace is a BASIC statement, as far as this assembler is concerned. Within
-BASIC statements, labels are delimited on both sides by percent-signs `%`, so
-the label Foo would be invoked as `%Foo%`. This elaborate (ok, clunky) notation
+BASIC statements, labels are delimited on both sides by percent-signs `|`, so
+the label Foo would be invoked as `|Foo|`. This elaborate (ok, clunky) notation
 facilitates use of a fairly primitive pattern-matching substitution scheme.
 Labels inside comments will be still substituted, but the assembler does try to
 avoid modifying string constants.
@@ -58,8 +58,8 @@ Assembly example: if | marks the beginning of a line, this "assembly code":
    |
    |Loop    A=A+1
    |        PRINT A
-   |        IF A<10 THEN %Loop%
-   |        GO TO %Start%
+   |        IF A<10 THEN |Loop|
+   |        GO TO |Start|
 
 will "assemble" to the following BASIC code:
 
@@ -264,7 +264,7 @@ def assemble(source: Sequence[str]) -> bytes:
   quote_regex = re.compile(  # For extracting string constants from lines.
       r'(?:[^"]+|"[^"]*")')  # "-free runs, or runs surrounded by ".
   label_regex = re.compile(  # For extracting label invocations from line parts.
-      r'(?:[^%]+|%[^%]*%)')  # %-free runs, or runs surrounded by %.
+      r'(?:[^\|]+|\|[\w]+\|)')   # Runs surrounded by |, or anything else.
 
   for num, line_number, statement in line_numbers_and_statements:
     if statement.count('"') % 2: raise ValueError(
@@ -276,13 +276,13 @@ def assemble(source: Sequence[str]) -> bytes:
       if part.startswith('"'):    # Parts that are string constants we...
         final_parts.append(part)  # pass through without processing.
       else:  # Other parts we scan for potential label substitution.
-        if part.count('%') % 2: raise ValueError(
+        if part.count('|') % 2: raise ValueError(
             f'Unterminated label invocation on line {num}: "{part}"')
         subparts = label_regex.findall(part)  # Break part into "subparts".
         final_subparts: list[str] = []  # Same accumulation gimmick here.
 
         for subpart in subparts:
-          if subpart.startswith('%'):  # Process label invocations.
+          if subpart.startswith('|'):  # Process label invocations.
             label = subpart[1:-1]
             try:
               final_subparts.append(str(label_to_line_number[label]))

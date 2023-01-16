@@ -20,15 +20,17 @@ class t4050AssemblerTest(unittest.TestCase):
         '',
         'Loop    A=A+1',
         '        PRINT A',
-        '        IF A<10 THEN %Loop%',
-        '        GO TO %Start%']
+        '        PRINT %3,14:"Hi!"',
+        '        IF A<10 THEN |Loop|',
+        '        GO TO |Start|']
     result = t4050_assembler.assemble(code)
     self.assertEqual(result, '\r'.join([
         '101 LET A=0  ! Initialise A',
         '106 A=A+1',
         '111 PRINT A',
-        '116 IF A<10 THEN 106',
-        '121 GO TO 101']).encode('ASCII') + b'\r\r')
+        '116 PRINT %3,14:"Hi!"',
+        '121 IF A<10 THEN 106',
+        '126 GO TO 101']).encode('ASCII') + b'\r\r')
 
   def test_errors(self):
     """Test various errors the assembler can throw."""
@@ -37,9 +39,9 @@ class t4050AssemblerTest(unittest.TestCase):
     with self.assertRaisesRegex(ValueError, 'Unterminated string'):
       t4050_assembler.assemble(['   PRINT "hello"world"'])
     with self.assertRaisesRegex(ValueError, 'Unterminated label'):
-      t4050_assembler.assemble(['   GO TO %nowhere']);
+      t4050_assembler.assemble(['   GO TO |nowhere']);
     with self.assertRaisesRegex(ValueError, 'Invocation of undefined'):
-      t4050_assembler.assemble(['   GO TO %nowhere%']);
+      t4050_assembler.assemble(['   GO TO |nowhere|']);
     with self.assertRaisesRegex(ValueError, 'numeric value in INC'):
       t4050_assembler.assemble(['   inc -1']);
     with self.assertRaisesRegex(ValueError, 'numeric value in INC'):
@@ -52,7 +54,7 @@ class t4050AssemblerTest(unittest.TestCase):
     code = [  # ORG does not affect immediately-preceding labels.
         '       ORG 100',
         'label  ORG 200',
-        '       GO TO %label%']
+        '       GO TO |label|']
     result = t4050_assembler.assemble(code)
     self.assertEqual(result, b'200 GO TO 100\r\r')
 
@@ -77,7 +79,7 @@ class t4050AssemblerTest(unittest.TestCase):
     code = [  # INC does not affect immediately-preceding labels.
         '       A=1+2',
         'label  INC 5',  # Dangerous!!
-        '       GO TO %label%']
+        '       GO TO |label|']
     result = t4050_assembler.assemble(code)
     self.assertEqual(result, '\r'.join([
         '10 A=1+2',
@@ -86,7 +88,7 @@ class t4050AssemblerTest(unittest.TestCase):
   def test_forward_reference(self):
     """Test correct resolving of forward references."""
     code = [
-        '       GO TO %ahead%',
+        '       GO TO |ahead|',
         'ahead  A=1+2']
     result = t4050_assembler.assemble(code)
     self.assertEqual(result, b'10 GO TO 20\r20 A=1+2\r\r')

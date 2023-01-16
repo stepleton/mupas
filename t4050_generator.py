@@ -183,7 +183,7 @@ def program(
   code: list[str] = [f'      INC {options.line_increment}']
   program_origin_label = f'_Program{symbols.path.replace("/", "_")}'
   if options.line1_jump:
-    code.extend(['      ORG 1', f'      GO TO %{program_origin_label}%'])
+    code.extend(['      ORG 1', f'      GO TO |{program_origin_label}|'])
   code.extend([f'      ORG {options.origin}',
                f'{program_origin_label}:',
                '      INIT'])
@@ -352,7 +352,7 @@ def block(
     # code for this block (and from there to any code that gets appended).
     if procedure_and_function_definitions:
       block_end_label = labels.generate('BlockEnd', symbols)
-      code.append(f'      GO TO %{block_end_label}%')
+      code.append(f'      GO TO |{block_end_label}|')
       code.extend(procedure_and_function_definitions)
       code.append(f'{block_end_label}:')
 
@@ -556,7 +556,7 @@ def sta_procedure(
     case t4050_extensions.ExtensionExitSymbol():
       if parameters: raise RuntimeError(
           'For 4050 BASIC, Exit takes no parameters.')
-      code = [f'      GO TO %_Exit{symbols.path.replace("/", "_")}%']
+      code = [f'      GO TO |_Exit{symbols.path.replace("/", "_")}|']
 
     case _:
       raise RuntimeError(
@@ -579,7 +579,7 @@ def sta_goto(
   except KeyError:
     raise RuntimeError(f'There is no label {ast.label} in {symbols.path}')
   label.used = True  # Avert warnings of unused labels.
-  return t4050_compiled.Statement(code=[f'      GO TO %{label.name}%'])
+  return t4050_compiled.Statement(code=[f'      GO TO |{label.name}|'])
 
 
 def sta_if(
@@ -614,7 +614,7 @@ def sta_if(
     statements = [
         t4050_compiled.Statement(code=compiled_condition.compute),  # growth: 0!
         t4050_compiled.Statement(code=[
-            f'      IF {compiled_condition.access} THEN %{then_label}%']),
+            f'      IF {compiled_condition.access} THEN |{then_label}|']),
         t4050_compiled.Statement(code=stack_pop_code)]
 
     # Add further alternative code if it exists, then the GOTO to jump past the
@@ -623,7 +623,7 @@ def sta_if(
       statements.append(sta_statement(
           ast.alternative, symbols, frame, quoted_constants, labels))
     statements.append(
-        t4050_compiled.Statement(code=[f'      GO TO %{out_label}%']))
+        t4050_compiled.Statement(code=[f'      GO TO |{out_label}|']))
 
     # Add the consequent (with stack-popping first), and the end label.
     statements.extend([
@@ -646,7 +646,7 @@ def sta_if(
               code=compiled_condition.compute,
               stack_growth=compiled_condition.stack_growth),
           t4050_compiled.Statement(code=[
-              f'      IF NOT {compiled_condition.access} THEN %{out_label}%']),
+              f'      IF NOT {compiled_condition.access} THEN |{out_label}|']),
           sta_statement(
               ast.consequent, symbols, frame, quoted_constants, labels),
           t4050_compiled.Statement(code=[f'{out_label}:'])])
@@ -662,10 +662,10 @@ def sta_if(
               code=compiled_condition.compute,
               stack_growth=compiled_condition.stack_growth),
           t4050_compiled.Statement(code=[
-              f'      IF {compiled_condition.access} THEN %{then_label}%']),
+              f'      IF {compiled_condition.access} THEN |{then_label}|']),
           sta_statement(
               ast.alternative, symbols, frame, quoted_constants, labels),
-          t4050_compiled.Statement(code=[f'      GO TO %{out_label}%',
+          t4050_compiled.Statement(code=[f'      GO TO |{out_label}|',
                                          f'{then_label}:']),
           sta_statement(
               ast.consequent, symbols, frame, quoted_constants, labels),
@@ -712,7 +712,7 @@ def sta_case(
       tests.append(f'{compiled_selector.access}={constant_value}')
     # Create the "jump table" IF statement for this case.
     statements.append(t4050_compiled.Statement(
-        code=[f'      IF {" OR ".join(tests)} THEN %{case_label}%']))
+        code=[f'      IF {" OR ".join(tests)} THEN |{case_label}|']))
 
   # Generate the "otherwise" clause, if present; either way, include a general
   # fall-through past the end of the case statement.
@@ -720,7 +720,7 @@ def sta_case(
   if ast.otherwise is not None: statements.append(sta_statement(
       ast.otherwise, symbols, frame, quoted_constants, labels))
   statements.append(
-      t4050_compiled.Statement(code=[f'      GO TO %{end_label}%']))
+      t4050_compiled.Statement(code=[f'      GO TO |{end_label}|']))
 
   # Generate consequents for each case.
   for ast_case, case_label in zip(ast.cases, case_labels):
@@ -729,7 +729,7 @@ def sta_case(
     statements.append(sta_statement(
         ast_case.consequent, symbols, frame, quoted_constants, labels))
     statements.append(
-        t4050_compiled.Statement(code=[f'      GO TO %{end_label}%']))
+        t4050_compiled.Statement(code=[f'      GO TO |{end_label}|']))
 
   # Actually, we can delete that last GO TO because the very next line is the
   # exit beyond the end of the CASE statement.
@@ -845,14 +845,14 @@ def sta_for(
         f'      {control_variable}={compiled_initial.access}',
         f'{top_label}:',
         f'      IF {control_variable}{compare}{compiled_final.access} THEN '
-        f'%{end_label}%']))
+        f'|{end_label}|']))
     # Execute the loop body.
     code.append(sta_statement(
         ast.body, symbols, frame, quoted_constants, labels))
     # Bottom of loop: increment control variable and return to top of loop.
     code.append(t4050_compiled.Statement(code=[
         f'      {control_variable}={control_variable}{ast.step:+}',
-        f'      GO TO %{top_label}%',
+        f'      GO TO |{top_label}|',
         f'{end_label}:']))
 
   # Clean any extra use of stack.
@@ -891,9 +891,9 @@ def sta_repeat(
   # At the bottom of the loop, decide whether to loop once more.
   statements.append(t4050_compiled.Statement(code=(
       compiled_condition.compute +
-      [f'      IF {compiled_condition.access} THEN %{end_label}%'] +
+      [f'      IF {compiled_condition.access} THEN |{end_label}|'] +
       stack_pop_code +
-      [f'      GO TO %{top_label}',
+      [f'      GO TO |{top_label}|',
        f'{end_label}:'] +
       stack_pop_code)))
 
@@ -927,13 +927,13 @@ def sta_while(
       t4050_compiled.Statement(code=(
           [f'{top_label}:'] +
           compiled_condition.compute +
-          [f'      IF NOT {compiled_condition.access} THEN %{end_label}%'] +
+          [f'      IF NOT {compiled_condition.access} THEN |{end_label}|'] +
           stack_pop_code)),
       # Here's the loop body itself.
       sta_statement(ast.body, symbols, frame, quoted_constants, labels),
       # At the bottom of the loop: the jump back to top, plus cleanup.
       t4050_compiled.Statement(code=(
-          [f'      GO TO %{top_label}%',
+          [f'      GO TO |{top_label}|',
            f'{end_label}:'] +
           stack_pop_code))])
 
@@ -1622,7 +1622,7 @@ def setup_stack_for_subroutine_and_call(
 
   # Call the subroutine!
   subroutine_path = symbols.itempath(name).replace('/', '_')
-  code.append(f'      GOS %_SubEnter{subroutine_path}%')
+  code.append(f'      GOS |_SubEnter{subroutine_path}|')
 
   # Cleanup. Get rid of stack frame bookkeeping we made for this call, except
   # for an entry for the function's return value (if the caller wants it). Then

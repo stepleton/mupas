@@ -357,7 +357,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',  # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',  # Enclosing scope context for call.
          f'{fp}={fp}+3',       # Advance frame pointer for call.
-         'GOS %_SubEnter_AssignAFunctionResult_Foo%',  # Jump to subroutine.
+         'GOS |_SubEnter_AssignAFunctionResult_Foo|',  # Jump to subroutine.
          f'{fp}={s}[{fp}-2]',  # Restore old frame pointer after call.
          f'{sp}={sp}-4'])      # Pop all but the function return value...
     self.assertEqual(comp.stack_growth, 1)  # which remains on the stack.
@@ -396,7 +396,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+4]={fp}',  # Save old frame pointer for (Five's) call.
          f'{s}[{fp}+5]={fp}',  # Enclosing scope context for (Five's) call.
          f'{fp}={fp}+6',    # Advance frame pointer for (Five's) call.
-         'GOS %_SubEnter_AssignAFunctionResult_Five%',  # Call Five
+         'GOS |_SubEnter_AssignAFunctionResult_Five|',  # Call Five
          f'{fp}={s}[{fp}-2]',  # Restore old frame pointer after (Five's) call.
          f'{sp}={sp}-2',    # Leave Five's result on the stack.
          f'{sp}={sp}+1',    # Advance SP to allocate space for parameter 2.
@@ -407,7 +407,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+6]={fp}',  # Save old frame pointer for (Gamma's) call.
          f'{s}[{fp}+7]={fp}',  # Enclosing scope context for (Gamma's) call.
          f'{fp}={fp}+8',    # Advance frame pointer for (Gamma's) call.
-         'GOS %_SubEnter_AssignAFunctionResult_Gamma%',  # Call Gamma.
+         'GOS |_SubEnter_AssignAFunctionResult_Gamma|',  # Call Gamma.
          f'{fp}={s}[{fp}-2]',  # Restore old frame pointer after (Gamma's) call.
          f'{sp}={sp}-3',    # Leave Gamma's result on the stack.
 
@@ -416,7 +416,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',  # Save old frame pointer for (Foo's) call.
          f'{s}[{fp}+2]={fp}',  # Enclosing scope context for (Foo's) call.
          f'{fp}={fp}+3',    # Advance frame pointer for (Foo's) call.
-         'GOS %_SubEnter_AssignAFunctionResult_Foo%',  # Call Foo at last.
+         'GOS |_SubEnter_AssignAFunctionResult_Foo|',  # Call Foo at last.
          f'{fp}={s}[{fp}-2]',  # Restore old frame pointer after (Foo's) call.
          f'{sp}={sp}-4'])   # Leave Foo's result on the stack.
     self.assertEqual(comp.stack_growth, 1)  # which remains on the stack.
@@ -457,7 +457,7 @@ class T4050GeneratorTest(unittest.TestCase):
     comp = t4050_generator.sta_statement(
       goto, symbols, frame, quoted_constants, labels)
     self.assertEqual([c.strip() for c in comp.code],
-                     [f'GO TO %{labels[123].name}%'])
+                     [f'GO TO |{labels[123].name}|'])
     self.assertTrue(labels[123].used)
 
   def test_if_statement(self):
@@ -484,12 +484,12 @@ class T4050GeneratorTest(unittest.TestCase):
     # Now compare generated code against the "assembly" output we expect.
     self.assertEqual(
         [c.strip() for c in comp.code],
-        [f'IF NOT (1>2) THEN %{label_endif_1}%',  # Jump UNLESS condition holds.
+        [f'IF NOT (1>2) THEN |{label_endif_1}|',  # Jump UNLESS condition holds.
          f'{variable_name}=123',                  # Consequent.
          f'{label_endif_1}:',                     # Target to jump to.
-         f'IF (1>3) THEN %{label_then_1}%',       # Jump IF condition holds.
+         f'IF (1>3) THEN |{label_then_1}|',       # Jump IF condition holds.
          f'{variable_name}=456',                  # Alternative.
-         f'GO TO %{label_endif_2}%',              # Go past consequent.
+         f'GO TO |{label_endif_2}|',              # Go past consequent.
          f'{label_then_1}:',                      # Target to jump to.
          f'{variable_name}=123',                  # Consequent.
          f'{label_endif_2}:'])                    # End of IF statement.
@@ -525,15 +525,15 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',     # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',     # Enclosing scope context for call.
          f'{fp}={fp}+3',          # Advance frame pointer for call.
-         'GOS %_SubEnter_AssignFunctionStuff_Five%',  # Call the function.
+         'GOS |_SubEnter_AssignFunctionStuff_Five|',  # Call the function.
          f'{fp}={s}[{fp}-2]',     # Restore old frame pointer after call.
          f'{sp}={sp}-2',          # Leave the result on the stack.
 
-         f'IF {s}[{fp}] THEN %{label_then_1}%',  # Jump if condition.
+         f'IF {s}[{fp}] THEN |{label_then_1}|',  # Jump if condition.
 
          f'{sp}={sp}-1',          # Alternative. Pop condition off stack.
          f'{variable_name}=123',  # Alternative body.
-         f'GO TO %{label_endif_1}%',   # Jump past consequent.
+         f'GO TO |{label_endif_1}|',   # Jump past consequent.
 
          f'{label_then_1}:',      # Beginning of consequent.
          f'{sp}={sp}-1',          # Pop condition result off the stack.
@@ -542,7 +542,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',     # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',     # Enclosing scope context for call.
          f'{fp}={fp}+3',          # Advance frame pointer for call.
-         'GOS %_SubEnter_AssignFunctionStuff_Five%',  # Expression term call
+         'GOS |_SubEnter_AssignFunctionStuff_Five|',  # Expression term call
          f'{fp}={s}[{fp}-2]',     # Restore old frame pointer after call.
          f'{sp}={sp}-2',          # Leave its result on the stack.
 
@@ -550,7 +550,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+2]={fp}',     # Save old frame pointer for call.
          f'{s}[{fp}+3]={fp}',     # Enclosing scope context for call.
          f'{fp}={fp}+4',          # Advance frame pointer for call.
-         'GOS %_SubEnter_AssignFunctionStuff_Five%',  # Expression term call
+         'GOS |_SubEnter_AssignFunctionStuff_Five|',  # Expression term call
          f'{fp}={s}[{fp}-2]',     # Restore old frame pointer after call.
          f'{sp}={sp}-2',          # Leave its result on the stack.
 
@@ -602,16 +602,16 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',           # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',           # Enclosing scope context for call.
          f'{fp}={fp}+3',                # Advance frame pointer for call.
-         'GOS %_SubEnter_RepeatsALot_Five%',  # Call condition function.
+         'GOS |_SubEnter_RepeatsALot_Five|',  # Call condition function.
          f'{fp}={s}[{fp}-2]',           # Restore old frame pointer after call.
          f'{sp}={sp}-2',                # Leave the result on the stack.
-         f'IF {s}[{fp}] THEN %{label_end_1}%',  # Leave if condition is true.
+         f'IF {s}[{fp}] THEN |{label_end_1}|',  # Leave if condition is true.
          f'{sp}={sp}-1',                # Else, pop condition result off stack.
-         f'GO TO %{label_top_2}',       # Go back to repeat inner loop.
+         f'GO TO |{label_top_2}|',      # Go back to repeat inner loop.
          f'{label_end_1}:',             # Off-ramp for the inner loop.
          f'{sp}={sp}-1',                # Pop condition result off stack.
-         f'IF 1 THEN %{label_end_2}%',  # Leave outer loop if condition is true.
-         f'GO TO %{label_top_1}',       # Wasn't, so repeat outer loop.
+         f'IF 1 THEN |{label_end_2}|',  # Leave outer loop if condition is true.
+         f'GO TO |{label_top_1}|',      # Wasn't, so repeat outer loop.
          f'{label_end_2}:'])            # Repeat statement exit.
 
   def test_while_statement(self):
@@ -648,23 +648,23 @@ class T4050GeneratorTest(unittest.TestCase):
     self.assertEqual(
         [c.strip() for c in comp.code],
         [f'{label_top_1}:',         # Outer loop top.
-         f'IF NOT 1 THEN %{label_end_2}%',  # If condition not met, skip out.
+         f'IF NOT 1 THEN |{label_end_2}|',  # If condition not met, skip out.
          f'{variable_name}=123',    # Outer loop body first statement.
          f'{label_top_2}:',         # Inner loop top.
          f'{sp}={sp}+3',            # Advance stack pointer to parameters.
          f'{s}[{fp}+1]={fp}',       # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',       # Enclosing scope context for call.
          f'{fp}={fp}+3',            # Advance frame pointer for call.
-         'GOS %_SubEnter_WhilesALot_Five%',  # Call condition function.
+         'GOS |_SubEnter_WhilesALot_Five|',  # Call condition function.
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-2',            # Leave the result on the stack.
-         f'IF NOT ({s}[{fp}]-4) THEN %{label_end_1}%',  # Exit inner if unmet.
+         f'IF NOT ({s}[{fp}]-4) THEN |{label_end_1}|',  # Exit inner if unmet.
          f'{sp}={sp}-1',            # Otherwise, pop result off the stack.
          f'{variable_name}=456',    # Inner loop body.
-         f'GO TO %{label_top_2}%',  # Back to top of the inner loop.
+         f'GO TO |{label_top_2}|',  # Back to top of the inner loop.
          f'{label_end_1}:',         # Inner loop exit.
          f'{sp}={sp}-1',            # Pop condition result off the stack.
-         f'GO TO %{label_top_1}%',  # Back to top of the outer loop.
+         f'GO TO |{label_top_1}|',  # Back to top of the outer loop.
          f'{label_end_2}:'])        # Outer loop exit.
 
   def test_case_statement(self):
@@ -704,22 +704,22 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',       # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',       # Enclosing scope context for call.
          f'{fp}={fp}+3',            # Advance frame pointer for call.
-         'GOS %_SubEnter_Casey_Five%',  # Call condition function.
+         'GOS |_SubEnter_Casey_Five|',  # Call condition function.
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-2',            # Leave the result on the stack.
 
          f'IF {s}[{fp}]=1 OR {s}[{fp}]=2 OR {s}[{fp}]=3 OR {s}[{fp}]=4 '
-         f'THEN %{label_case_1}%',  # Where to jump for the first case.
-         f'IF {s}[{fp}]=5 THEN %{label_case_2}%',  # Where for the second case.
+         f'THEN |{label_case_1}|',  # Where to jump for the first case.
+         f'IF {s}[{fp}]=5 THEN |{label_case_2}|',  # Where for the second case.
 
          f'{sp}={sp}-1',            # Pop condition result off the stack.
          f'{variable_name}=789',    # Otherwise case body.
-         f'GO TO %{label_end_1}%',  # Jump beyond case statement.
+         f'GO TO |{label_end_1}|',  # Jump beyond case statement.
 
          f'{label_case_1}:',        # Jump target for first case.
          f'{sp}={sp}-1',            # Pop condition result off the stack.
          f'{variable_name}=123',    # First case body.
-         f'GO TO %{label_end_1}%',  # Jump beyond case statement.
+         f'GO TO |{label_end_1}|',  # Jump beyond case statement.
 
          f'{label_case_2}:',        # Jump target for second case.
          f'{sp}={sp}-1',            # Pop condition result off the stack.
@@ -762,7 +762,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',       # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',       # Enclosing scope context for call.
          f'{fp}={fp}+3',            # Advance frame pointer for call.
-         'GOS %_SubEnter_CallsALot_Five%',  # Call function.
+         'GOS |_SubEnter_CallsALot_Five|',  # Call function.
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-3',            # Pop everything off the stack.
 
@@ -774,12 +774,12 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}]={fp}',         # Save old frame pointer for call.
          f'{s}[{fp}+1]={fp}',       # Enclosing scope context for call.
          f'{fp}={fp}+2',            # Advance frame pointer for call.
-         'GOS %_SubEnter_CallsALot_Hi%',  # Call procedure
+         'GOS |_SubEnter_CallsALot_Hi|',  # Call procedure
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-4',            # Pop everything off the stack.
 
-         f'IF 0 THEN %{label_end_1}%',  # Leave loop if condition is true.
-         f'GO TO %{label_top_1}',   # Wasn't, so repeat loop.
+         f'IF 0 THEN |{label_end_1}|',  # Leave loop if condition is true.
+         f'GO TO |{label_top_1}|',  # Wasn't, so repeat loop.
          f'{label_end_1}:'])        # Repeat statement exit.
 
   def test_for_statement_that_uses_native_for(self):
@@ -855,7 +855,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+2]={fp}',     # Enclosing scope context for call.
          f'{fp}={fp}+3',          # Advance frame pointer for call.
          f'{sp}={sp}+1',          # Grow stack for local variables.
-         'GOS %_SubEnter_CallsOne_Five%',  # Call the function.
+         'GOS |_SubEnter_CallsOne_Five|',  # Call the function.
          f'{fp}={s}[{fp}-2]',     # Restore old frame pointer after call.
          f'{sp}={sp}-4'])         # Leave nothing on the stack.
 
@@ -881,7 +881,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_Empty%',  # Preamble 3: Jump to origin.
+         'GO TO |_Program_Empty|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Empty:',         # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -925,7 +925,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_Basic%',  # Preamble 3: Jump to origin.
+         'GO TO |_Program_Basic|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Basic:',         # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -939,13 +939,13 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}]={fp}',         # Save old frame pointer for call.
          f'{s}[{fp}+1]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+2',            # Advance frame pointer for call.
-         'GOS %_SubEnter_Basic_SetX%',  # Call procedure.
+         'GOS |_SubEnter_Basic_SetX|',  # Call procedure.
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-3',            # Pop everything off stack.
 
          '_Exit_Basic:',            # Program exit label.
          f'DEL {variable_name}',    # Cleanup local variable.
-         f'GO TO %{label_end_1}%',  # Jump to end of program.
+         f'GO TO |{label_end_1}|',  # Jump to end of program.
 
          'REM /Basic/SetX',
          '_SubEnter_Basic_SetX:',   # SetX subroutine implementation.
@@ -996,7 +996,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_SoSo%',   # Preamble 3: Jump to origin.
+         'GO TO |_Program_SoSo|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_SoSo:',          # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -1010,13 +1010,13 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}]={fp}',         # Save old frame pointer for call.
          f'{s}[{fp}+1]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+2',            # Advance frame pointer for call.
-         'GOS %_SubEnter_SoSo_A%',  # Call procedure "A".
+         'GOS |_SubEnter_SoSo_A|',  # Call procedure "A".
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-3',            # Pop everything off stack.
 
          '_Exit_SoSo:',             # Program exit label.
          f'DEL {variable_name}',    # Cleanup local variable.
-         f'GO TO %{label_end_2}%',  # Jump to end of program.
+         f'GO TO |{label_end_2}|',  # Jump to end of program.
 
          'REM /SoSo/A',
          '_SubEnter_SoSo_A:',       # "A" subroutine implementation.
@@ -1026,11 +1026,11 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',       # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+3',            # Advance frame pointer for call.
-         'GOS %_SubEnter_SoSo_A_B%',  # Call procedure "B".
+         'GOS |_SubEnter_SoSo_A_B|',  # Call procedure "B".
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-3',            # Pop everything off stack.
          '_Exit_SoSo_A:',           # "A" subroutine exit label.
-         f'GO TO %{label_end_1}%',  # Jump to end of "A".
+         f'GO TO |{label_end_1}|',  # Jump to end of "A".
 
          'REM /SoSo/A/B',
          '_SubEnter_SoSo_A_B:',     # "B" subroutine implementation.
@@ -1079,7 +1079,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_WithStrings%',  # Preamble 3: Jump to origin.
+         'GO TO |_Program_WithStrings|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_WithStrings:',   # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -1142,7 +1142,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_VarOnStack%',   # Preamble 3: Jump to origin.
+         'GO TO |_Program_VarOnStack|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_VarOnStack:',    # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -1157,12 +1157,12 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+2',            # Advance frame pointer for call.
          f'{sp}={sp}+2',            # Advance stack pointer for DoIt locals.
-         'GOS %_SubEnter_VarOnStack_DoIt%',  # Call procedure.
+         'GOS |_SubEnter_VarOnStack_DoIt|',  # Call procedure.
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-5',            # Pop 1 arg, 2 locals, and maintenance.
 
          '_Exit_VarOnStack:',       # Program exit label.
-         f'GO TO %{label_end_1}%',  # Jump to end of program.
+         f'GO TO |{label_end_1}|',  # Jump to end of program.
 
          'REM /VarOnStack/DoIt',
          '_SubEnter_VarOnStack_DoIt:',  # DoIt subroutine implementation.
@@ -1221,7 +1221,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_Nesty%',  # Preamble 3: Jump to origin.
+         'GO TO |_Program_Nesty|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Nesty:',         # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -1236,13 +1236,13 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+2',            # Advance frame pointer for call.
          f'{sp}={sp}+1',            # Grow stack for "DoIt" local variable.
-         'GOS %_SubEnter_Nesty_DoIt%',  # Call procedure "DoIt".
+         'GOS |_SubEnter_Nesty_DoIt|',  # Call procedure "DoIt".
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-4',            # Pop everything off stack.
 
          '_Exit_Nesty:',            # Program exit label.
          f'DEL {bar_name}',         # Cleanup local variable.
-         f'GO TO %{label_end_2}%',  # Jump to end of program.
+         f'GO TO |{label_end_2}|',  # Jump to end of program.
 
          'REM /Nesty/DoIt',
          '_SubEnter_Nesty_DoIt:',   # "DoIt" subroutine implementation.
@@ -1250,12 +1250,12 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+2]={fp}',       # Push first parameter.
          f'{s}[{fp}+3]={fp}',       # Save old frame pointer for call.
          f'{fp}={fp}+4',            # Advance frame pointer for call.
-         'GOS %_SubEnter_Nesty_DoIt_Nest%',  # Call procedure "Nest".
+         'GOS |_SubEnter_Nesty_DoIt_Nest|',  # Call procedure "Nest".
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-2',            # Pop everything off stack.
          f'{bar_name}={s}[{fp}{baz_offset}]',  # Assign baz to bar.
          '_Exit_Nesty_DoIt:',       # "DoIt" subroutine exit label.
-         f'GO TO %{label_end_1}%',  # Jump to end of "DoIt".
+         f'GO TO |{label_end_1}|',  # Jump to end of "DoIt".
 
          'REM /Nesty/DoIt/Nest',
          '_SubEnter_Nesty_DoIt_Nest:',  # "Nest" subroutine implementation.
@@ -1302,7 +1302,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_Returney%',   # Preamble 3: Jump to origin.
+         'GO TO |_Program_Returney|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Returney:',      # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -1314,7 +1314,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',       # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+3',            # Advance frame pointer for call.
-         'GOS %_SubEnter_Returney_Five%',  # Call procedure.
+         'GOS |_SubEnter_Returney_Five|',  # Call procedure.
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-2',            # Pop all but the function return value.
          f'{variable_name}={s}[{fp}]',  # Assign return value to bar.
@@ -1322,7 +1322,7 @@ class T4050GeneratorTest(unittest.TestCase):
 
          '_Exit_Returney:',         # Program exit label.
          f'DEL {variable_name}',    # Cleanup local variable.
-         f'GO TO %{label_end_1}%',  # Jump to end of program.
+         f'GO TO |{label_end_1}|',  # Jump to end of program.
 
          'REM /Returney/Five',
          '_SubEnter_Returney_Five:',  # "Five" subroutine implementation.
@@ -1375,7 +1375,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_ForAgain%',   # Preamble 3: Jump to origin.
+         'GO TO |_Program_ForAgain|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_ForAgain:',      # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -1388,22 +1388,22 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+2',            # Advance frame pointer for call.
          f'{sp}={sp}+1',            # Grow stack for "DoIt" local variable.
-         'GOS %_SubEnter_ForAgain_DoIt%',  # Call procedure "DoIt".
+         'GOS |_SubEnter_ForAgain_DoIt|',  # Call procedure "DoIt".
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-3',            # Pop everything off stack.
 
          '_Exit_ForAgain:',         # Program exit label.
          f'DEL {variable_name}',    # Cleanup local variable.
-         f'GO TO %{label_end_1}%',  # Jump to end of program.
+         f'GO TO |{label_end_1}|',  # Jump to end of program.
 
          'REM /ForAgain/DoIt',
          '_SubEnter_ForAgain_DoIt:',  # "DoIt" subroutine implementation.
          f'{s}[{fp}]=1',            # For loop preparation: set initial value.
          f'{label_fortop_1}:',      # Top of the for loop.
-         f'IF {s}[{fp}]>10 THEN %{label_forend_1}%',  # Time to exit loop?
+         f'IF {s}[{fp}]>10 THEN |{label_forend_1}|',  # Time to exit loop?
          f'{variable_name}={s}[{fp}]',  # Loop body: assign to bar.
          f'{s}[{fp}]={s}[{fp}]+1',  # Increment control variable.
-         f'GO TO %{label_fortop_1}%',   # Jump to top of loop.
+         f'GO TO |{label_fortop_1}|',   # Jump to top of loop.
          f'{label_forend_1}:',      # Loop exit.
          '_Exit_ForAgain_DoIt:',    # "DoIt" subroutine exit label.
          f'RET',                    # Return to caller.
@@ -1455,7 +1455,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_Scopey%',   # Preamble 3: Jump to origin.
+         'GO TO |_Program_Scopey|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Scopey:',        # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -1468,12 +1468,12 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+2',            # Advance frame pointer for call.
          f'{sp}={sp}+1',            # Grow stack for "DoIt" local variable.
-         'GOS %_SubEnter_Scopey_DoIt%',
+         'GOS |_SubEnter_Scopey_DoIt|',
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-3',            # Pop everything off stack.
 
          '_Exit_Scopey:',           # Program exit label.
-         f'GO TO %{label_end_2}%',  # Jump to end of program.
+         f'GO TO |{label_end_2}|',  # Jump to end of program.
 
          'REM /Scopey/DoIt',
          '_SubEnter_Scopey_DoIt:',  # "DoIt" subroutine implementation.
@@ -1481,11 +1481,11 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}+1]={fp}',       # Save old frame pointer for call.
          f'{s}[{fp}+2]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+3',            # Advance frame pointer for call.
-         'GOS %_SubEnter_Scopey_DoIt_B%',  # Call procedure "B".
+         'GOS |_SubEnter_Scopey_DoIt_B|',  # Call procedure "B".
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-2',            # Pop everything off stack.
          '_Exit_Scopey_DoIt:',      # "DoIt" subroutine exit label.
-         f'GO TO %{label_end_1}%',  # Jump to "DoIt" subroutine exit.
+         f'GO TO |{label_end_1}|',  # Jump to "DoIt" subroutine exit.
 
          'REM /Scopey/DoIt/A',
          '_SubEnter_Scopey_DoIt_A:',  # "A" subroutine implementation.
@@ -1499,7 +1499,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}]={fp}',         # Save old frame pointer for call.
          f'{s}[{fp}+1]={s}[{fp}-1]',  # (!) Enclosing context for call.
          f'{fp}={fp}+2',            # Advance frame pointer for call.
-         'GOS %_SubEnter_Scopey_DoIt_A%',  # Call procedure "A".
+         'GOS |_SubEnter_Scopey_DoIt_A|',  # Call procedure "A".
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-2',            # Pop everything off stack.
          '_Exit_Scopey_DoIt_B:',    # "B" subroutine exit label.
@@ -1557,7 +1557,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_ExtraSubs%',  # Preamble 3: Jump to origin.
+         'GO TO |_Program_ExtraSubs|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_ExtraSubs:',     # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -1569,13 +1569,13 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{s}[{fp}]={fp}',         # Save old frame pointer for call.
          f'{s}[{fp}+1]={fp}',       # Enclosing context for call.
          f'{fp}={fp}+2',            # Advance frame pointer for call.
-         'GOS %_SubEnter_ExtraSubs_DoIt%',  # Call procedure "DoIt".
+         'GOS |_SubEnter_ExtraSubs_DoIt|',  # Call procedure "DoIt".
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-2',            # Pop everything off stack.
 
          '_Exit_ExtraSubs:',        # Program exit label.
          f'DEL {variable_name}',    # Cleanup local variable.
-         f'GO TO %{label_end_1}%',  # Jump to end of program.
+         f'GO TO |{label_end_1}|',  # Jump to end of program.
 
          'REM /ExtraSubs/DoIt',
          '_SubEnter_ExtraSubs_DoIt:',  # DoIt subroutine implementation.
@@ -1651,7 +1651,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in code],
         ['INC 10',                  # Preamble 1: line increment.
          'ORG 1',                   # Preamble 2: BASIC line 1
-         'GO TO %_Program_ExtensionUser%',  # Preamble 3: Jump to origin.
+         'GO TO |_Program_ExtensionUser|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_ExtensionUser:',   # Preamble 5: Origin label.
          'INIT',                    # Reset the interpreter.
@@ -1668,7 +1668,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'PRI',                     # The second WriteLn statement.
          'PRI @33,0:1,0,(3>4)',     # The InternalTapeParams statement.
          'SET GRA',                 # The SetGrads statement.
-         'GO TO %_Exit_ExtensionUser%',   # The Exit statement.
+         'GO TO |_Exit_ExtensionUser|',   # The Exit statement.
          'CAL "EDITOR",123',        # The Call statement.
          f'{str_name}=STR (64+971.2)',  # The NumToStr statement.
          'AXI @16:20,20',           # The Axis statement.
@@ -1690,7 +1690,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'DRA @16:{mx3_name},{mx2_name}',   # Second DrawArrays statement.
          f'_MatrixFill_{matrix_hash}:',  # MatrixFill statement label.
          'DAT 1.1,2.2,3.3,4.4,1,-1,7.7,8.8',   # MatrixFill statement data.
-         f'RES %_MatrixFill_{matrix_hash}%',   # MatrixFill statement RESTORE.
+         f'RES |_MatrixFill_{matrix_hash}|',   # MatrixFill statement RESTORE.
          f'REA {mx2_name}',         # MatrixFill statement READ.
          '_Exit_ExtensionUser:',    # Program exit label.
          f'DEL {str_name}',         # Delete the string variable.

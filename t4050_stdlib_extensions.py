@@ -1312,7 +1312,7 @@ def _matrix_fill(
   code = ([f'{label}:'] +
           ['      DAT ' + numbers.replace(' ', ',')
            for numbers in textwrap.wrap(literals, width=60)] +
-          [f'      RES %{label}%',
+          [f'      RES |{label}|',
            f'      REA {dest.access}'])
   return t4050_compiled.Statement(code=code, stack_growth=0)
 

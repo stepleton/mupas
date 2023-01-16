@@ -185,6 +185,9 @@ compiler without the help of the following people and resources:
   documentation](https://github.com/mmcgraw74/Tektronix-4051-4052-4054-Program-Files).
 - Tektronix 4050-series technical documentation [at dvq.com](
   http://www.dvq.com/tektronix/).
+- In-browser Tektronix 4051 emulator by Jon Stanley and others ([github](
+  https://github.com/jonbstanley/Tek405xEmulator), [online emulator](
+  https://jonbstanley.github.io/Tek405xEmulator/jsTEKTRONIX4051.html))
 - The "Flash Drive" Tektronix 4924 tape drive emulator [[1]](
   https://github.com/Twilight-Logic/AR488_Store), [[2]](
   https://github.com/mmcgraw74/Tektronix-4050-GPIB-Flash-Drive), [[3]](
@@ -194,4 +197,4 @@ compiler without the help of the following people and resources:
 - Help from John, Monty, and A.M. for help keeping the 4054A up-and-running.
 
 
--- _[Tom Stepleton](mailto:stepleton@gmail.com), 14 January 2023, London_
+-- _[Tom Stepleton](mailto:stepleton@gmail.com), 16 January 2023, London_

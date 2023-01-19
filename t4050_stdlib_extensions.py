@@ -1725,13 +1725,13 @@ def _check_expression_compatibility(
           if expected.might_want_room_for is not None:
             if size < expected.might_want_room_for: 
               size_warning(size, expected.might_want_room_for)
-          if expected.even_number_of_elements is not None:
+          if expected.even_number_of_elements:
             if size % 2: constraint_fail()
 
-        # 1-D arrays.
+        # 2-D arrays.
         case mupas_types.Array2d():
           size = array_num_elements(actual.typeinfo)
-          if expected.even_number_of_elements is not None:
+          if expected.even_number_of_elements:
             if size % 2: constraint_fail()
 
   # Those extra checks have all passed, so now do the regular type

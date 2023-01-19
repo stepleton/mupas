@@ -15,6 +15,7 @@ generate code for statements, (3) functions that generate code for expressions,
 and (4) general utilities.
 """
 
+import copy
 import dataclasses
 import itertools
 import warnings
@@ -802,25 +803,25 @@ def sta_for(
   # homebrew. But we must not allow the user to mutate the control variable,
   # because if they do, the program will crash.
   if isinstance(symbol.storage, t4050_resources.NumericVariable):
-    # The way we accomplish this is cheeky: we use a new nested scope that
-    # binds the symbol to a zero-argument extension function, making the
-    # control variable readable but not writable.
-    with symbols.nest('{FOR}') as symbols_for:
+    # The way we accomplish this is cheeky: we temporarily bind the symbol to
+    # a zero-argument extension function, making the control variable readable
+    # but not writable. Here is the implementation of the extension:
+    def extension(
+        args: list[t4050_compiled.Expression]
+    ) -> t4050_compiled.Expression:
+      if args: raise RuntimeError(f'{ast.control_variable} is a FOR loop '
+                                  "control variable; you can't call it")
+      assert isinstance(symbol, mupas_scopes.VariableSymbol)  # already known!
+      return t4050_compiled.Expression(
+          typeinfo=symbol.typeinfo,
+          access=control_variable, is_unqualified_variable=True)
 
-      # Implementation of the extension.
-      def extension(
-          args: list[t4050_compiled.Expression]
-      ) -> t4050_compiled.Expression:
-        if args: raise RuntimeError(f'{ast.control_variable} is a FOR loop '
-                                    "control variable; you can't call it")
-        assert isinstance(symbol, mupas_scopes.VariableSymbol)  # already known!
-        return t4050_compiled.Expression(
-            typeinfo=symbol.typeinfo,
-            access=control_variable, is_unqualified_variable=True)
+    # As a symbol that we can bind:
+    substitute = t4050_extensions.ExtensionFunctionSymbol(extension=extension)
 
-      # Binding the extension.
-      symbols_for[ast.control_variable] = (
-          t4050_extensions.ExtensionFunctionSymbol(extension=extension))
+    # In this context, we bind the control variable name temporarily to the
+    # extension.
+    with symbols.substitute(**{ast.control_variable: substitute}):
 
       # Now we can implement the FOR loop.
       step = f' STEP {ast.step}' if ast.step != 1 else ''
@@ -828,7 +829,7 @@ def sta_for(
           f'      FOR {control_variable}={compiled_initial.access} TO '
           f'{compiled_final.access}{step}']))
       code.append(sta_statement(
-          ast.body, symbols_for, frame, quoted_constants, labels))
+          ast.body, symbols, frame, quoted_constants, labels))
       code.append(
           t4050_compiled.Statement(code=[f'      NEXT {control_variable}']))
 
@@ -1365,10 +1366,11 @@ def get_base_typeinfo(typeinfo: mupas_types.Type) -> mupas_types.Type:
 def update_base_typeinfo(
     enclosing_typeinfo: mupas_types.Type, new_base_typeinfo: mupas_types.Type,
 ) -> mupas_types.Type:
-  """Update the element type if an array, otherwise pass new_base_typeinfo."""
+  """Return with new element type if an array, else pass new_base_typeinfo."""
   if isinstance(enclosing_typeinfo, _ARRAY_TYPES):
-    return dataclasses.replace(enclosing_typeinfo,
-                               value_typeinfo=new_base_typeinfo)
+    new_typeinfo = copy.copy(enclosing_typeinfo)
+    new_typeinfo.value_typeinfo = new_base_typeinfo
+    return new_typeinfo
   else:
     return new_base_typeinfo
 

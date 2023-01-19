@@ -11,6 +11,7 @@ module.
 import dataclasses
 import enum
 import functools
+import os
 import re
 
 import lark
@@ -221,7 +222,8 @@ class _Transformer(lark.Transformer):
 @functools.cache
 def _parser() -> lark.Lark:
   """Create/retrieve a singleton Lark parser from the preprocessor grammar."""
-  return lark.Lark.open('preprocessor_grammar.lark')
+  module_dir = os.path.dirname(os.path.realpath(__file__))
+  return lark.Lark.open(os.path.join(module_dir, 'preprocessor_grammar.lark'))
 
 
 def _default_include_loader(filename: str) -> str:

@@ -24,6 +24,14 @@ class MupasScopesTest(unittest.TestCase):
     with self.assertRaisesRegex(KeyError, 'Symbol item is already bound'):
       scope['item'] = 10
 
+    # Substitution and temporary bindings.
+    with scope.substitute(item=10, temp=20):
+      self.assertTrue('temp' in scope)
+      self.assertEqual(scope['item'], 10)
+      self.assertEqual(scope['temp'], 20)
+    self.assertFalse('temp' in scope)
+    self.assertEqual(scope['item'], 5)
+
     # Removal and errors with missing bindings.
     del scope['item']
     self.assertFalse('item' in scope)

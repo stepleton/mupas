@@ -22,6 +22,7 @@ import dataclasses
 import enum
 import functools
 import itertools
+import os
 
 import lark
 
@@ -46,7 +47,9 @@ def parse(
 @functools.cache
 def _parser() -> lark.Lark:
   """Create/retrieve a singleton Lark parser from the language grammar."""
-  return lark.Lark.open('pascal_grammar.lark', maybe_placeholders=True)
+  module_dir = os.path.dirname(os.path.realpath(__file__))
+  return lark.Lark.open(
+      os.path.join(module_dir, 'pascal_grammar.lark'), maybe_placeholders=True)
 
 
 ### Generic AST node, for type checking.

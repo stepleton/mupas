@@ -1,0 +1,4 @@
+name: mupas
+dependencies:
+  - python>=3.10
+  - lark>=1.1.1

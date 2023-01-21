@@ -377,7 +377,7 @@ def symbol_table_text(symbols: SymbolScopeProtocol) -> Sequence[str]:
     A sequence of strings (without newlines) that together represent the
     contents of the symbol table.
   """
-  text = [symbols.path]
+  text = [f'{symbols.path}:']
 
   # Collect extensions if any are defined in this scope.
   extensions = [k for k, v in symbols.bindings.items()
@@ -389,8 +389,11 @@ def symbol_table_text(symbols: SymbolScopeProtocol) -> Sequence[str]:
 
   # Determine the length of the longest symbol name and the width we'll use for
   # the symbol name field for each binding.
-  max_name_len = max(len(k) for k, v in symbols.bindings.items()
-                     if not isinstance(v, ExtensionSymbol))
+  if symbols.bindings:
+    max_name_len = max(len(k) for k, v in symbols.bindings.items()
+                       if not isinstance(v, ExtensionSymbol))
+  else:
+    max_name_len = 0  # No symbols are bound local to this scope!
   name_width = max(12, 4 * math.ceil((max_name_len + 2) / 4))
 
   # Now list the non-extension bindings defined in this scope.

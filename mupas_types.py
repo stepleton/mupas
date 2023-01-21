@@ -195,7 +195,8 @@ class Procedure(Subroutine):
   """A procedure, which only has parameters."""
 
   def __str__(self) -> str:
-    parameters = f" ({', '}.join(self.parameters))" if self.parameters else ''
+    parameters = (f" ({', '.join(str(p) for p in self.parameters)})"
+                  if self.parameters else '')
     return f'PROCEDURE{parameters}'
 
 
@@ -210,5 +211,6 @@ class Function(Subroutine):
     self.return_typeinfo = return_typeinfo
 
   def __str__(self) -> str:
-    parameters = f" ({', '}.join(self.parameters))" if self.parameters else ''
+    parameters = (f" ({', '.join(str(p) for p in self.parameters)})"
+                  if self.parameters else '')
     return f'FUNCTION{parameters}: {self.return_typeinfo}'

@@ -36,6 +36,11 @@ Additionally, limitations where muPas falls short of a "real" Pascal include:
 There are other limitations that you will discover when the compiler
 cryptically refuses to compile your code.
 
+More benign differences between muPas and Pascal include:
+
+- Variable, function, and procedure identifiers (including ones for Pascal
+  "built-ins" like `WriteLn`) are all case-sensitive.
+
 The compiler allows programs to use the majority of built-in 4050-series BASIC
 commands, as well as certain extended commands for A-model machines (4052A,
 4054A), commands for the Option 30 dynamic graphics system, and commands for

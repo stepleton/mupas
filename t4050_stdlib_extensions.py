@@ -734,7 +734,7 @@ class _Constraints(mupas_types.Type):
     self.even_number_of_elements = even_number_of_elements
     self.access_matches = access_matches
 
-  def __str__(self):
+  def __str__(self) -> str:
     text = []
     for k, v in self.__dict__.items():
       if isinstance(v, bool):

@@ -187,7 +187,7 @@ class Item:
   kind: Kind
   value: str
 
-  def __str__(self): return self.value
+  def __str__(self) -> str: return self.value
 
 
 class _Transformer(lark.Transformer):

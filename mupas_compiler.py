@@ -55,7 +55,7 @@ import mupas_types
 import preprocessor
 import pascal_parser
 
-from typing import Collection, Optional, Mapping, Sequence
+from typing import Collection, Optional, Mapping, MutableSequence, Sequence
 
 
 __version__ = 'muPas compiler 0.1 circa January 2023'
@@ -74,7 +74,8 @@ def _define_flags():
 
   flags.add_argument('-o', '--output', default='-',
                      help=('Where to write the resulting binary; omit to '
-                           'write to standard out'),
+                           'write to standard out; can be suppressed by other '
+                           'flags'),
                      metavar='FILENAME', type=argparse.FileType('wb'))
 
   flags.add_argument('-t', '--target', default='tek4050',
@@ -84,13 +85,19 @@ def _define_flags():
 
   flags.add_argument('-S', '--assembly-output', nargs='?', const=sys.stdout,
                      help=('Write compiled assembly code to a file, or if '
-                           "'-', to standard output; assembling and binary "
-                           'output is suppressed'),
+                           "'-', to standard output (which suppresses binary "
+                           'output to standard output)'),
                      metavar='FILENAME', type=argparse.FileType('w'))
 
   flags.add_argument('-O', '--optimise',
                      default=False, action=argparse.BooleanOptionalAction,
                      help='Enable optimisation', type=bool)
+
+  flags.add_argument('-T', '--symbol-table-output', nargs='?', const=sys.stdout,
+                     help=('Write information about the symbol table to a '
+                           "file, or if '-', to standard output (which "
+                           'suppresses binary output to standard output)'),
+                     metavar='FILENAME', type=argparse.FileType('w'))
 
   flags.add_argument('-v', '--version',
                      default=False, action=argparse.BooleanOptionalAction,
@@ -142,29 +149,33 @@ class Compiler(abc.ABC):
   def compile(
       self,
       source_text: str,
-      filename: Optional[str] = None,
+      source_filename: Optional[str] = None,
+      symbol_table_text: Optional[MutableSequence[str]] = None,
   ) -> Sequence[str]:
     """Compile a source text into a target-specific assembly format.
 
     Args:
       source_text: Complete source code for the program to compile.
-      filename: Filename for the source text, or None if the text originated
-          elsewhere. Used for error messages.
+      source_filename: Filename for the source text, or None if the text
+          originated elsewhere. Used for error messages.
+      symbol_table_text: Sequence receiving printable lines describing the
+          symbol table for the entire program, or None if these details are
+          not required.
 
     Returns:
-      Target-specifc assembly code for the compiled program.
+      Target-specific assembly code for the compiled program.
     """
     # Preprocess. muPas does not support units right now.
     preprocessed_source_text, quoted_constants, units = (
-        preprocessor.preprocess(source_text) if filename is None else
-        preprocessor.preprocess(source_text, file_nest=(filename,)))
+        preprocessor.preprocess(source_text) if source_filename is None else
+        preprocessor.preprocess(source_text, file_nest=(source_filename,)))
     if units: raise RuntimeError('muPas does not support units')
 
     # Parse the program.
     ast = pascal_parser.parse(preprocessed_source_text)
     if not isinstance(ast, pascal_parser.Program):
-      where = f'in {filename}' if filename is not None else ''
-      raise RuntimeError(f'muPas source {where} was not a program')
+      where = f' in {source_filename}' if source_filename is not None else ''
+      raise RuntimeError(f'muPas source{where} was not a program')
 
     # Check the parse tree for violations of muPas's simplifying assumptions.
     mupas_analyses.check_parse_tree(ast)
@@ -181,6 +192,10 @@ class Compiler(abc.ABC):
     mupas_analyses.add_static_resources(  # We always add static first.
         symbols, rev_call_graph, static_allocator)
     mupas_analyses.add_stack_resources(symbols, frame_allocator)
+
+    # Create symbol table dump if desired.
+    if symbol_table_text is not None:
+      symbol_table_text.extend(mupas_scopes.symbol_table_text(symbols))
 
     # Generate and return assembly code.
     return self._generate(ast, symbols, quoted_constants, rev_call_graph,
@@ -392,13 +407,23 @@ def main(FLAGS: argparse.Namespace):
   except KeyError:
     raise ValueError(f'Unrecognised target architecture {FLAGS.target}')
 
-  # Compile and assemble.
+  # Determining what kinds of outputs are desired. Binary output is suppressed
+  # if it's competing for standard output with one of the textual outputs.
+  symbol_table_text = None if FLAGS.symbol_table_output is None else list[str]()
+  should_write_binary = (FLAGS.output is not sys.stdout.buffer or
+                         (FLAGS.assembly_output is not sys.stdout and
+                          FLAGS.symbol_table_output is not sys.stdout))
+
+  # Compile, and assemble if desired.
   source_text = FLAGS.source.read()
-  assembly = compiler.compile(source_text, FLAGS.source.name)
-  if FLAGS.assembly_output is None:
+  assembly = compiler.compile(source_text, FLAGS.source.name, symbol_table_text)
+  if should_write_binary:
     binary = compiler.assemble(assembly)
     FLAGS.output.write(binary)
-  else:
+  if FLAGS.symbol_table_output is not None:
+    assert symbol_table_text is not None
+    FLAGS.symbol_table_output.write('\n'.join(symbol_table_text) + '\n')
+  if FLAGS.assembly_output is not None:
     FLAGS.assembly_output.write('\n'.join(assembly) + '\n')
 
 

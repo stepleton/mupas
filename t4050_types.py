@@ -37,13 +37,13 @@ class Union(_ForCheckingType):
 
   This type class is only meant to be used 
   """
-  types: tuple[mupas_types.Type]
+  types: tuple[mupas_types.Type, ...]
 
   def __init__(self, *args: mupas_types.Type):
-    types = args
+    self.types = tuple(args)
 
-  def __str__(self):
-    return f'Union[{",".join(types)}]'
+  def __str__(self) -> str:
+    return f'Union[{",".join(str(t) for t in self.types)}]'
 
 
 class String(_ForCheckingType):
@@ -56,6 +56,9 @@ class String(_ForCheckingType):
   @classmethod
   def from_string(cls, string: mupas_types.String):
     return cls(string.length)
+
+  def __str__(self) -> str:
+    return f"String[{'...' if self.length is None else self.length}]"
 
 
 class Array1d(_ForCheckingType):
@@ -74,8 +77,9 @@ class Array1d(_ForCheckingType):
   def from_array1d(cls, array: mupas_types.Array1d):
     return cls(array.index_typeinfo, array.value_typeinfo)
 
-  def __str__(self):
-    return f'{self.value_typeinfo.__class__.__name__}[{self.index_typeinfo}]'
+  def __str__(self) -> str:
+    index = str(self.index_typeinfo) if self.index_typeinfo else '...'
+    return f'ARRAY [index] OF {self.value_typeinfo}'
 
 
 class Array2d(_ForCheckingType):
@@ -99,9 +103,10 @@ class Array2d(_ForCheckingType):
                array.col_index_typeinfo,
                array.value_typeinfo)
 
-  def __str__(self):
-    return (f'{self.value_typeinfo.__class__.__name__}'
-            f'[{self.row_index_typeinfo},{self.col_index_typeinfo}]')
+  def __str__(self) -> str:
+    row_i = str(self.row_index_typeinfo) if self.row_index_typeinfo else '...'
+    col_i = str(self.col_index_typeinfo) if self.col_index_typeinfo else '...'
+    return f'ARRAY [{row_i},{col_i}] OF {self.value_typeinfo}'
 
 
 def check_assignment_or_parameter_compatibility(
@@ -135,12 +140,18 @@ def check_assignment_or_parameter_compatibility(
   match expected:
     # Union of types.
     case Union(types=types):
-      return any(
-          check_assignment_or_parameter_compatibility(t, actual) for t in types)
+      for t in types:
+        try:
+          check_assignment_or_parameter_compatibility(t, actual)
+          return  # Successful type match against union element; can return.
+        except TypeMismatch:
+          pass  # This match failed; try again.
+      else:
+        mismatch_fail()
 
     # 1-D array.
-    case mupas_types.Array1d:
-      return check_assignment_or_parameter_compatibility(
+    case mupas_types.Array1d():
+      check_assignment_or_parameter_compatibility(
           Array1d.from_array1d(expected), actual)
 
     case Array1d(index_typeinfo=l_index, value_typeinfo=l_value):
@@ -158,9 +169,9 @@ def check_assignment_or_parameter_compatibility(
           mismatch_fail()
 
     # 2-D array.
-    case mupas_types.Array2d:
-      return check_assignment_or_parameter_compatibility(
-          Array1d.from_array2d(expected), actual)
+    case mupas_types.Array2d():
+      check_assignment_or_parameter_compatibility(
+          Array2d.from_array2d(expected), actual)
 
     case Array2d(row_index_typeinfo=l_row,
                  col_index_typeinfo=l_col,
@@ -181,8 +192,8 @@ def check_assignment_or_parameter_compatibility(
           mismatch_fail()
 
     # String.
-    case mupas_types.String:
-      return check_assignment_or_parameter_compatibility(
+    case mupas_types.String():
+      check_assignment_or_parameter_compatibility(
           String.from_string(expected), actual)
 
     case String(length=l_len):
@@ -198,24 +209,28 @@ def check_assignment_or_parameter_compatibility(
           mismatch_fail()
 
     # Scalar numbers of all types.
-    case mupas_types.ScalarNumber:
+    case mupas_types.ScalarNumber():
       # Any non-scalar to scalar assignment.
       if not isinstance(actual, mupas_types.ScalarNumber):
         mismatch_fail()
-      # Real to anything not real.
+      # Real to anything not real or more generic.
       elif isinstance(actual, mupas_types.Real):
-        if not isinstance(expected, mupas_types.Real): warnings.warn(
+        if not isinstance(expected, (mupas_types.Real,
+                                     mupas_types.ScalarNumber)): warnings.warn(
             f'Using an {actual} value in a {expected} context could result in '
             'ordinal values no longer being made of integers; consider an '
             'explicit conversion or cast')
       # Ordinal to ordinal.
-      elif all(isinstance(x, mupas_types.Ordinal) for x in (expected, actual)):
-        elb, eub = expected.lower_bound, expected.upper_bound
+      elif (isinstance(expected, mupas_types.Ordinal) and
+            isinstance(actual, mupas_types.Ordinal)):
         alb, aub = actual.lower_bound, actual.upper_bound
-        if alb < elb or aub > eub: warnings.warn(
-            f'Using a {actual} (which can have values in {alb}..{aub}) in a '
-            f'{expected} (which can have values in {elb}..{eub}) context; '
-            'consider an explicit conversion or cast.')
+        # Only check bounds if the expected type is a proper Ordinal subclass.
+        if type(expected) != mupas_types.Ordinal:
+          elb, eub = expected.lower_bound, expected.upper_bound
+          if alb < elb or aub > eub: warnings.warn(
+              f'Using a {actual} (which can have values in {alb}..{aub}) in a '
+              f'{expected} (which can have values in {elb}..{eub}) context; '
+              'consider an explicit conversion or cast.')
 
 
 class TypeMismatch(RuntimeError):

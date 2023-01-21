@@ -33,6 +33,8 @@ from typing import Collection
 
 class Value(mupas_resources.Value):
   """Superclass for a place on the stack where a value is stored."""
+  def __str__(self) -> str:
+    return '<stack item>'  # A fallback; subclasses should supply better
 
 
 class Frame(abc.ABC, mupas_resources.Frame):

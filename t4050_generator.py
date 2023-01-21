@@ -508,8 +508,19 @@ def sta_assignment(
 
   # The value to assign to the stored value is simply an expression.
   compiled_rhs = exp_expression(ast.value, symbols, frame, quoted_constants)
-  t4050_types.check_assignment_or_parameter_compatibility(  # Check types, sure.
-      compiled_lhs.typeinfo, compiled_rhs.typeinfo)
+
+  # Assignment compatibility checking: if its an array, you can assign scalar
+  # values to set all elements, so we must allow both scalars and arrays on
+  # the right-hand side. Otherwise, we compare LHS and RHS types directly.
+  if isinstance(compiled_lhs.typeinfo, (mupas_types.Array1d,
+                                        mupas_types.Array2d)):
+    t4050_types.check_assignment_or_parameter_compatibility(
+        t4050_types.Union(compiled_lhs.typeinfo,
+                          compiled_lhs.typeinfo.value_typeinfo),
+        compiled_rhs.typeinfo)
+  else:
+    t4050_types.check_assignment_or_parameter_compatibility(
+        compiled_lhs.typeinfo, compiled_rhs.typeinfo)
 
   # Return the assignment itself.
   return t4050_compiled.chain_statements([

@@ -56,6 +56,9 @@ class StringVariable(mupas_static.Value):
   def __init__(self, variable_name: str):
     self.variable_name = variable_name
 
+  def __str__(self) -> str:
+    return self.variable_name
+
 
 class NumericVariable(mupas_static.Value):
   """4050 BASIC's 286 numeric variables.
@@ -69,6 +72,9 @@ class NumericVariable(mupas_static.Value):
   def __init__(self, variable_name: str):
     self.variable_name = variable_name
 
+  def __str__(self) -> str:
+    return self.variable_name
+
 
 class StackValue(mupas_stack.Value):
   """A scalar number stored on the (simulated) stack.
@@ -80,6 +86,9 @@ class StackValue(mupas_stack.Value):
 
   def __init__(self, fp_offset: int):
     self.fp_offset = fp_offset
+
+  def __str__(self) -> str:
+    return f'[FP{self.fp_offset:+}]'
 
 
 #### Static storage allocation, initialisation, and retirement. ####

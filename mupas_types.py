@@ -14,8 +14,8 @@ from typing import Sequence
 
 class Type:
   """Base class for muPas types."""
-  def __str__(self):
-    return self.__class__.__name__
+  def __str__(self) -> str:
+    return self.__class__.__name__  # A fallback that limits clutter.
 
 
 class CodePointer(Type):
@@ -92,7 +92,7 @@ class IntegerSubrange(Integer):
     self.lower_bound = lower_bound
     self.upper_bound = upper_bound
 
-  def __str__(self):
+  def __str__(self) -> str:
     return f'{self.lower_bound}..{self.upper_bound}'
 
   def ord(self, int_value: int) -> int:
@@ -118,6 +118,9 @@ class Enumerated(IntegerSubrange):
   def to_int(self, identifier: str) -> int:
     return self.identifiers.index(identifier)
 
+  def __str__(self) -> str:
+    return f"({','.join(self.identifiers)})"
+
 
 class String(Type):
   """A text string."""
@@ -125,6 +128,9 @@ class String(Type):
 
   def __init__(self, length: int):
     self.length = length
+
+  def __str__(self) -> str:
+    return f'String[{self.length}]'
 
 
 class Array1d(Type):
@@ -137,8 +143,8 @@ class Array1d(Type):
     self.index_typeinfo = index_typeinfo
     self.value_typeinfo = value_typeinfo
 
-  def __str__(self):
-    return f'{self.value_typeinfo.__class__.__name__}[{self.index_typeinfo}]'
+  def __str__(self) -> str:
+    return f'ARRAY [{self.index_typeinfo}] OF {self.value_typeinfo}'
 
 
 class Array2d(Type):
@@ -156,9 +162,9 @@ class Array2d(Type):
     self.col_index_typeinfo = col_index_typeinfo
     self.value_typeinfo = value_typeinfo
 
-  def __str__(self):
-    return (f'{self.value_typeinfo.__class__.__name__}'
-            f'[{self.row_index_typeinfo},{self.col_index_typeinfo}]')
+  def __str__(self) -> str:
+    return (f'ARRAY [{self.row_index_typeinfo},{self.col_index_typeinfo}] OF '
+            f'{self.value_typeinfo}')
 
 
 class SubroutineParameter:
@@ -171,6 +177,9 @@ class SubroutineParameter:
     self.name = name
     self.typeinfo = typeinfo
     self.reference = reference
+
+  def __str__(self) -> str:
+    return f"{'VAR ' if self.reference else ''}{self.typeinfo}"
 
 
 class Subroutine(Type):
@@ -185,6 +194,10 @@ class Subroutine(Type):
 class Procedure(Subroutine):
   """A procedure, which only has parameters."""
 
+  def __str__(self) -> str:
+    parameters = f" ({', '}.join(self.parameters))" if self.parameters else ''
+    return f'PROCEDURE{parameters}'
+
 
 class Function(Subroutine):
   """A function, which has a return value."""
@@ -195,3 +208,7 @@ class Function(Subroutine):
                return_typeinfo: ScalarNumber):
     super().__init__(parameters)
     self.return_typeinfo = return_typeinfo
+
+  def __str__(self) -> str:
+    parameters = f" ({', '}.join(self.parameters))" if self.parameters else ''
+    return f'FUNCTION{parameters}: {self.return_typeinfo}'

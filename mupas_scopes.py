@@ -26,15 +26,21 @@ the `add_static_resources` and `add_stack_resources` functions in
 
 import contextlib
 import dataclasses
+import math
+import textwrap
 
 import mupas_types
 import mupas_resources
 import pascal_parser
 
-from typing import Generic, Iterator, Mapping, Optional, Protocol, TypeVar
+from typing import Generic, Iterator, Mapping, Optional, Protocol, Sequence
+from typing import TypeVar
 
 
 T = TypeVar('T')
+
+
+_UNBOUND = '<unbound>'
 
 
 ### Generic classes for nested scopes.###
@@ -246,8 +252,6 @@ class BiScope(Scope[T], BiScopeProtocol[T]):
 ### Instantiations of nested scopes ###
 
 
-#class TypeScope(Scope[mupas_types.Type]):
-#  """Nested table of types in muPas programs."""
 TypeScope = Scope[mupas_types.Type]
 TypeScopeProtocol = ScopeProtocol[mupas_types.Type]
 
@@ -263,12 +267,19 @@ class Symbol:
   """
   definition: pascal_parser.AstNode
 
+  def __str__(self) -> str:
+    return self.__class__.__name__  # A fallback that limits clutter.
+
 
 @dataclasses.dataclass
 class VariableSymbol(Symbol):
   """Some symbols are bound to variables which refer to means of storage."""
   typeinfo: mupas_types.Type
   storage: Optional[mupas_resources.Value] = None
+
+  def __str__(self) -> str:
+    storage = _UNBOUND if self.storage is None else str(self.storage)
+    return f'{storage:19} {self.typeinfo}'
 
 
 @dataclasses.dataclass
@@ -283,6 +294,9 @@ class SubroutineSymbol(Symbol):
   typeinfo: mupas_types.Subroutine
   frame: Optional[mupas_resources.Frame] = None
 
+  def __str__(self) -> str:
+    return str(self.typeinfo)
+
 
 @dataclasses.dataclass
 class ConstantIntegerSymbol(Symbol):
@@ -294,6 +308,9 @@ class ConstantIntegerSymbol(Symbol):
     super().__init__(definition)
     self.typeinfo = mupas_types.Integer()
     self.value = value
+
+  def __str__(self) -> str:
+    return f'{self.value:<19} CONST {self.typeinfo}'
 
 
 @dataclasses.dataclass
@@ -307,6 +324,9 @@ class ConstantRealSymbol(Symbol):
     self.typeinfo = mupas_types.Real()
     self.value = value
 
+  def __str__(self) -> str:
+    return f'{self.value:<19} CONST {self.typeinfo}'
+
 
 @dataclasses.dataclass
 class ConstantStringSymbol(Symbol):
@@ -314,6 +334,10 @@ class ConstantStringSymbol(Symbol):
   typeinfo: mupas_types.String
   index: int
   storage: Optional[mupas_resources.Value] = None
+
+  def __str__(self) -> str:
+    storage = _UNBOUND if self.storage is None else str(self.storage)
+    return f'{storage:19} CONST {self.typeinfo}'
 
 
 @dataclasses.dataclass
@@ -331,7 +355,52 @@ class ExtensionSymbol(Symbol):
   """
 
 
-#class SymbolScope(BiScope[Symbol]):
-#  """Nested symbol table for muPas programs."""
 SymbolScope = BiScope[Symbol]
 SymbolScopeProtocol = BiScopeProtocol[Symbol]
+
+
+### Utilities ###
+
+
+def symbol_table_text(symbols: SymbolScopeProtocol) -> Sequence[str]:
+  """Produce a printable representation of a symbol table.
+
+  The dumped representation will show all of the entries in the symbol table,
+  organised by the context in which they are defined. The format of the table
+  isn't specified, is target-specific, and is intended for humans to read,
+  although machine parsing may be possible.
+
+  Args:
+    symbols: A symbol table.
+
+  Returns:
+    A sequence of strings (without newlines) that together represent the
+    contents of the symbol table.
+  """
+  text = [symbols.path]
+
+  # Collect extensions if any are defined in this scope.
+  extensions = [k for k, v in symbols.bindings.items()
+                if isinstance(v, ExtensionSymbol)]
+  if extensions:
+    text.append('  Extensions: ')
+    text.extend(
+        [f'    {s}' for s in textwrap.wrap(', '.join(extensions), width=74)])
+
+  # Determine the length of the longest symbol name and the width we'll use for
+  # the symbol name field for each binding.
+  max_name_len = max(len(k) for k, v in symbols.bindings.items()
+                     if not isinstance(v, ExtensionSymbol))
+  name_width = max(12, 4 * math.ceil((max_name_len + 2) / 4))
+
+  # Now list the non-extension bindings defined in this scope.
+  for k in sorted(symbols.bindings):
+    v = symbols.bindings[k]
+    if not isinstance(v, ExtensionSymbol):
+      text.append(f'  {k.ljust(name_width)}{v}')
+
+  # Recursively append the representations of child scopes.
+  for kid in sorted(symbols.children):
+    text.extend(symbol_table_text(symbols.children[kid]))
+
+  return text

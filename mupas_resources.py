@@ -13,6 +13,9 @@ class Value:
   all contexts where it needs to be used.
   """
 
+  def __str__(self) -> str:
+    return self.__class__.__name__  # A fallback that limits clutter.
+
 
 class Frame:
   """Superclass for all of a subroutine's local storage.

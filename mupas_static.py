@@ -22,6 +22,8 @@ import mupas_types
 
 class Value(mupas_resources.Value):
   """Superclass for a place where a static value is stored."""
+  def __str__(self) -> str:
+    return '<static item>'  # A fallback; subclasses should supply better
 
 
 class Allocator(abc.ABC):

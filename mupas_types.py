@@ -95,9 +95,6 @@ class IntegerSubrange(Integer):
   def __str__(self) -> str:
     return f'{self.lower_bound}..{self.upper_bound}'
 
-  def ord(self, int_value: int) -> int:
-    return int_value - self.lower_bound
-
 
 class LongintSubrange(IntegerSubrange):
   """A longint subrange is just an integer subrange in muPas."""
@@ -106,16 +103,13 @@ class LongintSubrange(IntegerSubrange):
 class Enumerated(IntegerSubrange):
   """Enumerated types."""
   identifiers: tuple[str, ...]
-  #lower_bound: int
-  #upper_bound: int
 
   def __init__(self, identifiers: Sequence[str]):
     super().__init__(0, len(identifiers) - 1)
     self.identifiers = tuple(identifiers)
-    #self.lower_bound = 0
-    #self.upper_bound = len(self.identifiers) - 1
 
   def to_int(self, identifier: str) -> int:
+    """Convert symbolic enumeration identifier to a number."""
     return self.identifiers.index(identifier)
 
   def __str__(self) -> str:

@@ -8,7 +8,8 @@ import unittest
 import t4050_assembler
 
 
-class t4050AssemblerTest(unittest.TestCase):
+class T4050AssemblerTest(unittest.TestCase):
+  """Test harness for testing the t4050_assembler module."""
 
   def test_basic(self):
     """Test the example program from the assembler's main docstring."""
@@ -39,15 +40,15 @@ class t4050AssemblerTest(unittest.TestCase):
     with self.assertRaisesRegex(ValueError, 'Unterminated string'):
       t4050_assembler.assemble(['   PRINT "hello"world"'])
     with self.assertRaisesRegex(ValueError, 'Unterminated label'):
-      t4050_assembler.assemble(['   GO TO |nowhere']);
+      t4050_assembler.assemble(['   GO TO |nowhere'])
     with self.assertRaisesRegex(ValueError, 'Invocation of undefined'):
-      t4050_assembler.assemble(['   GO TO |nowhere|']);
+      t4050_assembler.assemble(['   GO TO |nowhere|'])
     with self.assertRaisesRegex(ValueError, 'numeric value in INC'):
-      t4050_assembler.assemble(['   inc -1']);
+      t4050_assembler.assemble(['   inc -1'])
     with self.assertRaisesRegex(ValueError, 'numeric value in INC'):
-      t4050_assembler.assemble(['   Inc hams']);
+      t4050_assembler.assemble(['   Inc hams'])
     with self.assertRaisesRegex(ValueError, 'numeric value in ORG'):
-      t4050_assembler.assemble(['   orG']);
+      t4050_assembler.assemble(['   orG'])
 
   def test_org(self):
     """Test more nuanced behaviours of the ORG directive."""

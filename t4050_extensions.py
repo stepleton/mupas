@@ -61,7 +61,7 @@ class ExtensionFunctionSymbol(mupas_scopes.ExtensionSymbol):
   def __init__(self, extension: _ExtensionFunction):
     super().__init__(definition=pascal_parser.Extension())
     self.extension = extension
-   
+
 
 @dataclasses.dataclass
 class ExtensionProcedureSymbol(mupas_scopes.ExtensionSymbol):

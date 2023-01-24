@@ -7,6 +7,8 @@ preprocess a Pascal/Clascal program text supplied in a (long) string. For more
 details on what this entails, see the docstring for `preprocess()` in this
 module.
 """
+# pylint: disable=missing-function-docstring  # Unhelpful for Lark transformers.
+# pylint: disable=no-self-use  # Unhelpful for Lark transformers.
 
 import dataclasses
 import enum
@@ -137,8 +139,9 @@ def preprocess(
         filename = magic_match[2]
         # Avoid include loops.
         nested_file_nest = tuple(file_nest) + (filename,)
-        if filename in file_nest: raise RuntimeError(
-            f'Found an include loop: {"->".join(nested_file_nest)}')
+        if filename in file_nest:
+          raise RuntimeError(
+              f'Found an include loop: {"->".join(nested_file_nest)}')
         # Include the file by calling ourself recursively.
         nested_text, quoted_constants, nested_units_map = preprocess(
             include_loader(filename),
@@ -154,8 +157,8 @@ def preprocess(
       # Or if the user wanted to specify a unit file, then do that.
       elif magic_match and magic_match[1].upper() == '$U':
         filename = magic_match[2]
-        if next_item.kind != Kind.PROGRAM_TEXT: raise ValueError(
-          f'{item.value} was not followed by an identifier')
+        if next_item.kind != Kind.PROGRAM_TEXT:
+          raise ValueError(f'{item.value} was not followed by an identifier')
         unit_match = re.match(r'\s*([A-Za-z][0-9A-Za-z]*)?', next_item.value)
         assert unit_match is not None  # To reassure mypy.
         units_map.setdefault(filename, set()).add(unit_match[1] or '')
@@ -187,7 +190,8 @@ class Item:
   kind: Kind
   value: str
 
-  def __str__(self) -> str: return self.value
+  def __str__(self) -> str:
+    return self.value
 
 
 class _Transformer(lark.Transformer):
@@ -242,4 +246,5 @@ def _default_include_loader(filename: str) -> str:
   Returns:
     Contents of the file specified by `filename`.
   """
-  with open(filename, 'r') as f: return f.read()
+  with open(filename, 'r', encoding='utf-8') as file:
+    return file.read()

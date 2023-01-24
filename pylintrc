@@ -1,0 +1,26 @@
+[MASTER]
+
+[MESSAGES CONTROL]
+
+disable=no-else-return,              # An objectionable rule!
+        too-few-public-methods,      # Yeah bro I'm defining an interface...
+        too-many-arguments,          # no YOU have too many arguments!
+        too-many-locals,             # Always disabling this one...
+        too-many-return-statements,  # Agree to disagree.
+        useless-else-on-loop,        # This one is just wrong: return??
+        wrong-import-order           # I want to load Typing symbols last.
+
+
+[FORMAT]
+
+# Tell me you worked at Google without saying you worked at Google.
+indent-string='  '
+max-line-length=80
+
+# But long modules are allowed.
+max-module-lines=5000
+
+
+[BASIC]
+
+good-names=i,j,k,v,x,y,lo,hi,sp,fp,op,FLAGS

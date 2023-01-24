@@ -10,6 +10,7 @@ import preprocessor
 
 
 class PreprocessorTest(unittest.TestCase):
+  """Test harness for testing the preprocessor module."""
 
   def test_basic_example(self):
     """Mainly serves to show basic preprocessor operation."""

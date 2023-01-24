@@ -6,7 +6,7 @@ The code generator generates Tektronix 4050-series BASIC code from fragments
 that it assembles together as it recursively descends into the parse tree. To
 accomplish this, it must also know the storage allocation decisions made by the
 functions in the `mupas_analyses` module. This code generator does not make
-meaningful use of the traversal aids in the `mupas_descent` module, though it 
+meaningful use of the traversal aids in the `mupas_descent` module, though it
 could be written to do that if we really wanted.
 
 This module is organised into four sections: (1) functions that generate code
@@ -178,7 +178,8 @@ def program(
   assert ast.uses_clause is None
 
   # Use default program options if none are supplied.
-  if options is None: options = ProgramOptions()
+  if options is None:
+    options = ProgramOptions()
 
   # Code start: initialise the BASIC interpreter.
   code: list[str] = [f'      INC {options.line_increment}']
@@ -217,7 +218,8 @@ def program(
         const_string_delete.extend(
             static_allocator.delete_info(storage).code())
     # Recurse into the child scopes
-    for child_scope in symbols.children.values(): const_string_code(child_scope)
+    for child_scope in symbols.children.values():
+      const_string_code(child_scope)
 
   const_string_code(symbols)
   code.extend(const_string_init)
@@ -256,6 +258,8 @@ def block(
     rev_call_graph: Mapping[str, Collection[str]],
 ) -> list[str]:
   """Generate: for Block AST nodes."""
+  # pylint: disable=too-many-branches,too-many-statements  # bit of a saga sure.
+
   # Label declarations, if present.
   labels = Labels()
   if ast.label_declaration_part is not None:
@@ -329,7 +333,8 @@ def block(
         raise _InternalError  # This would also be deeply strange.
 
       # Skip this subroutine if it isn't used anywhere.
-      if symbols.itempath(name) not in rev_call_graph: continue
+      if symbols.itempath(name) not in rev_call_graph:
+        continue
 
       # Obtain the stack frame bookkeeping data for this subroutine. Our
       # recursive processing will mutate this frame, but in all cases we should
@@ -359,12 +364,16 @@ def block(
 
   # Before we leave: see if labels have been defined and used.
   for label, info in labels.items():
-    if not (info.defined or info.used): warnings.warn(
-        f'Label {label} is declared but not defined or used in {symbols.path}')
-    if info.defined and not info.used: warnings.warn(
-        f'Label {label} is defined and not used in {symbols.path}')
-    if info.used and not info.defined: raise RuntimeError(
-        f'Label {label} is used but not defined in {symbols.path}')
+    if not (info.defined or info.used):
+      warnings.warn(
+          f'Label {label} is declared but neither defined nor used in '
+          f'{symbols.path}')
+    if info.defined and not info.used:
+      warnings.warn(
+          f'Label {label} is defined and not used in {symbols.path}')
+    if info.used and not info.defined:
+      raise RuntimeError(
+          f'Label {label} is used but not defined in {symbols.path}')
 
   return code
 
@@ -434,11 +443,11 @@ def sta_statement(
   # Generate code that will execute the statement.
   match ast:
     case pascal_parser.StatementAssignment():
-      compiled = sta_assignment(ast, symbols, frame, quoted_constants, labels)
+      compiled = sta_assignment(ast, symbols, frame, quoted_constants)
     case pascal_parser.StatementProcedure():
-      compiled = sta_procedure(ast, symbols, frame, quoted_constants, labels)
+      compiled = sta_procedure(ast, symbols, frame, quoted_constants)
     case pascal_parser.StatementGoto():
-      compiled = sta_goto(ast, symbols, frame, quoted_constants, labels)
+      compiled = sta_goto(ast, symbols, labels)
     case pascal_parser.StatementIf():
       compiled = sta_if(ast, symbols, frame, quoted_constants, labels)
     case pascal_parser.StatementCase():
@@ -473,7 +482,6 @@ def sta_assignment(
     symbols: mupas_scopes.SymbolScopeProtocol,
     frame: t4050_resources.Frame,
     quoted_constants: Sequence[str],
-    labels: Labels,
 ) -> t4050_compiled.Statement:
   """Generate: for StatementAssignment AST nodes."""
   symbol = symbols[ast.destination.binding]
@@ -499,7 +507,8 @@ def sta_assignment(
       stack = frame.allocator.stack_resource.variable_name
       fp = frame.allocator.frame_pointer_resource.variable_name
       hops = symbols.itemhops(ast.destination.binding) - 1
-      for _ in range(hops): fp = f'{stack}[{fp}-1]'
+      for _ in range(hops):
+        fp = f'{stack}[{fp}-1]'
       compiled_lhs = t4050_compiled.Expression(
           typeinfo=symbol.typeinfo.return_typeinfo,
           access=f'{stack}[{fp}-3]', can_be_lhs=True)
@@ -537,9 +546,8 @@ def sta_procedure(
     symbols: mupas_scopes.SymbolScopeProtocol,
     frame: t4050_resources.Frame,
     quoted_constants: Sequence[str],
-    labels: Labels,
 ) -> t4050_compiled.Statement:
-  """Generate: for StatementAssignment AST nodes."""
+  """Generate: for StatementProcedure AST nodes."""
   # Retrieve the subroutine/extension symbol and the parameters of its
   # call/invocation, if any.
   symbol = symbols[ast.call.binding]
@@ -566,8 +574,8 @@ def sta_procedure(
 
     # For Exit: jump to the exit point for the current block.
     case t4050_extensions.ExtensionExitSymbol():
-      if parameters: raise RuntimeError(
-          'For 4050 BASIC, Exit takes no parameters.')
+      if parameters:
+        raise RuntimeError('For 4050 BASIC, Exit takes no parameters.')
       code = [f'      GO TO |_Exit{symbols.path.replace("/", "_")}|']
 
     case _:
@@ -581,15 +589,14 @@ def sta_procedure(
 def sta_goto(
     ast: pascal_parser.StatementGoto,
     symbols: mupas_scopes.SymbolScopeProtocol,
-    frame: t4050_resources.Frame,
-    quoted_constants: Sequence[str],
     labels: Labels,
 ) -> t4050_compiled.Statement:
   """Generate: for StatementGoto AST nodes."""
   try:
     label = labels[ast.label]
   except KeyError:
-    raise RuntimeError(f'There is no label {ast.label} in {symbols.path}')
+    raise RuntimeError(
+        f'There is no label {ast.label} in {symbols.path}') from None
   label.used = True  # Avert warnings of unused labels.
   return t4050_compiled.Statement(code=[f'      GO TO |{label.name}|'])
 
@@ -650,7 +657,7 @@ def sta_if(
     # A more streamlined way to compile IF statements if compiled_condition
     # does not grow the stack.
     if ast.alternative is None:
-      # For if statements with no "else clause". Generated code skips the "then
+      # For IF statements with no "else clause". Generated code skips the "then
       # clause" if the condition is false.
       out_label = labels.generate('EndIf', symbols)
       return t4050_compiled.chain_statements([
@@ -663,10 +670,9 @@ def sta_if(
               ast.consequent, symbols, frame, quoted_constants, labels),
           t4050_compiled.Statement(code=[f'{out_label}:'])])
     else:
-      # For if statements with both a "then clause" and an "else clause".
-      # Generated code 
-      compiled_alternative = sta_statement(
-          ast.alternative, symbols, frame, quoted_constants, labels)
+      # For IF statements with both a "then clause" and an "else clause".
+      # Generated code is structured in the way that an ordinary person would
+      # write an IF statement: "then cause" followed by "else clause".
       then_label = labels.generate('Then', symbols)
       out_label = labels.generate('EndIf', symbols)
       return t4050_compiled.chain_statements([
@@ -729,8 +735,9 @@ def sta_case(
   # Generate the "otherwise" clause, if present; either way, include a general
   # fall-through past the end of the case statement.
   statements.append(t4050_compiled.Statement(code=stack_pop_code))
-  if ast.otherwise is not None: statements.append(sta_statement(
-      ast.otherwise, symbols, frame, quoted_constants, labels))
+  if ast.otherwise is not None:
+    statements.append(sta_statement(
+        ast.otherwise, symbols, frame, quoted_constants, labels))
   statements.append(
       t4050_compiled.Statement(code=[f'      GO TO |{end_label}|']))
 
@@ -764,12 +771,14 @@ def sta_for(
   # Retrieve a binding for the control variable and do some checks.
   symbol = symbols[ast.control_variable]
   hops = symbols.itemhops(ast.control_variable)
-  if not isinstance(symbol, mupas_scopes.VariableSymbol): raise RuntimeError(
-      'The 4050 BASIC target requires FOR loop control variables to be an '
-      f'ordinal variable, not a {type(symbol).__name__}')
-  if not isinstance(symbol.typeinfo, mupas_types.Ordinal): raise RuntimeError(
-      'The 4050 BASIC target requires FOR loop control variables to have an '
-      f'ordinal type, not {symbol.typeinfo}')
+  if not isinstance(symbol, mupas_scopes.VariableSymbol):
+    raise RuntimeError(
+        'The 4050 BASIC target requires FOR loop control variables to be an '
+        f'ordinal variable, not a {type(symbol).__name__}')
+  if not isinstance(symbol.typeinfo, mupas_types.Ordinal):
+    raise RuntimeError(
+        'The 4050 BASIC target requires FOR loop control variables to have '
+        f'an ordinal type, not {symbol.typeinfo}')
   # The BASIC way to refer to the control variable.
   control_variable = get_variable_storage(symbol, frame, hops)
 
@@ -807,7 +816,8 @@ def sta_for(
         if isinstance(called, t4050_extensions.ExtensionExitSymbol):
           raise RuntimeError(error_text('Exit'))
   stack_growth = compiled_initial.stack_growth + compiled_final.stack_growth
-  if stack_growth > 0: mupas_descent.depth_first(no_gotos_exits, ast.body, None)
+  if stack_growth > 0:
+    mupas_descent.depth_first(no_gotos_exits, ast.body, None)
 
   # If the control variable is a 4050 BASIC numeric variable, we can "optimise"
   # by using 4050 BASIC's native FOR loop instead of an IF and GO TO based
@@ -820,8 +830,9 @@ def sta_for(
     def extension(
         args: list[t4050_compiled.Expression]
     ) -> t4050_compiled.Expression:
-      if args: raise RuntimeError(f'{ast.control_variable} is a FOR loop '
-                                  "control variable; you can't call it")
+      if args:
+        raise RuntimeError(f'{ast.control_variable} is a FOR loop control '
+                           "variable; you can't call it")
       assert isinstance(symbol, mupas_scopes.VariableSymbol)  # already known!
       return t4050_compiled.Expression(
           typeinfo=symbol.typeinfo,
@@ -963,13 +974,15 @@ def sta_label_and_statement(
   if ast.label is not None:
     try:
       labels[ast.label].defined = True
-    except KeyError: raise RuntimeError(
-      f'Attempt to define label {ast.label}, which was not declared')
+    except KeyError:
+      raise RuntimeError(f'Attempt to define label {ast.label}, which was not '
+                         'declared') from None
     label = labels.generate('Label', symbols, ast.label)
     statements.append(t4050_compiled.Statement(code=[f'{label}:']))
 
-  if ast.statement is not None: statements.append(
-      sta_statement(ast.statement, symbols, frame, quoted_constants, labels))
+  if ast.statement is not None:
+    statements.append(sta_statement(
+        ast.statement, symbols, frame, quoted_constants, labels))
 
   return t4050_compiled.chain_statements(statements)
 
@@ -1059,11 +1072,11 @@ def exp_binding_reference_or_call(
           mupas_scopes.ConstantRealSymbol(typeinfo=typeinfo, value=value)):
       # Numeric constants.
       return t4050_compiled.Expression(
-          typeinfo=symbol.typeinfo, access=str(value),
+          typeinfo=typeinfo, access=str(value),
           is_literal=True)  # Because `access` is a BASIC literal.
     case mupas_scopes.ConstantStringSymbol(typeinfo=typeinfo, storage=storage):
       # String constants.
-      # TODO: Implement subscripting of string constants.
+      # TODO: Implement string constant subscripting.  # pylint: disable=fixme
       assert isinstance(storage, t4050_resources.StringVariable)
       variable = storage.variable_name
       return t4050_compiled.Expression(
@@ -1118,20 +1131,21 @@ def exp_array_element_access(
   array_type = symbol.typeinfo
 
   # First, some checks.
-  if len(ast.qualifiers_and_parameters) != 1: raise RuntimeError(
-      f'Too many qualifiers on variable {array_name} for the 4050 BASIC target')
+  if len(ast.qualifiers_and_parameters) != 1:
+    raise RuntimeError(f'Too many qualifiers on variable {array_name} for '
+                       'the 4050 BASIC target')
   qualifier = ast.qualifiers_and_parameters[0]
   if not isinstance(qualifier, pascal_parser.QualifierIndex):
-      raise RuntimeError('muPas only supports indexing qualifiers on variables '
-                         f'for the 4050 BASIC target, not {type(qualifier)}')
+    raise RuntimeError('muPas only supports indexing qualifiers on variables '
+                       f'for the 4050 BASIC target, not {type(qualifier)}')
   if not isinstance(array_type, (mupas_types.Array1d, mupas_types.Array2d)):
-      raise RuntimeError('muPas array indexing only works with array '
-                         f'variables, not {array_type} variables')
+    raise RuntimeError('muPas array indexing only works with array '
+                       f'variables, not {array_type} variables')
   indices = qualifier.indices
   indices_needed = 1 if isinstance(array_type, mupas_types.Array1d) else 2
-  if len(indices) != indices_needed: raise RuntimeError(
-      f'Elements in the array {array_name} need {indices_needed} indices, not '
-      f'{len(indices)}.')
+  if len(indices) != indices_needed:
+    raise RuntimeError(f'Elements in the array {array_name} need '
+                       f'{indices_needed} indices, not {len(indices)}.')
 
   # Now compile the array indexing at last.
   compiled_indices = [exp_expression(index, symbols, frame, quoted_constants)
@@ -1163,10 +1177,12 @@ def exp_function_call(
     frame: t4050_resources.Frame,
     quoted_constants: Sequence[str],
 ) -> t4050_compiled.Expression:
+  """Generate: for function calls."""
   # First, verify that this is a function and collect its return type.
-  if not isinstance(symbol.typeinfo, mupas_types.Function): raise RuntimeError(
-      f'Attempt to use a {type(symbol.typeinfo)} in an expression: functions '
-      'are the only subroutines that can be used in expressions')
+  if not isinstance(symbol.typeinfo, mupas_types.Function):
+    raise RuntimeError(
+        f'Attempt to use a {type(symbol.typeinfo)} in an expression: '
+        'functions are the only subroutines that can be used in expressions')
   typeinfo = symbol.typeinfo.return_typeinfo
 
   # Extract parameters from the AST and do some checks.
@@ -1215,9 +1231,10 @@ def exp_expression_unary(
     # A logical not operation changes the data type to boolean.
     case pascal_parser.UnaryOp.LOGICAL_NOT:
       base_t = get_base_typeinfo(compiled_arg.typeinfo)
-      if not isinstance(base_t, mupas_types.ScalarNumber): raise RuntimeError(
-          f"A value of type {type(compiled_arg.typeinfo)} can't be logically "
-          'inverted for the 4050 BASIC target with unary NOT')
+      if not isinstance(base_t, mupas_types.ScalarNumber):
+        raise RuntimeError(
+            f"A value of type {type(compiled_arg.typeinfo)} can't be "
+            'logically inverted for the 4050 BASIC target with unary NOT')
       compiled_arg.access = f'(NOT {compiled_arg.access})'
       compiled_arg.typeinfo = update_base_typeinfo(
           enclosing_typeinfo=compiled_arg.typeinfo,
@@ -1229,9 +1246,10 @@ def exp_expression_unary(
     # to plain integers. Other types remain the same.
     case pascal_parser.UnaryOp.NEGATE:
       base_t = get_base_typeinfo(compiled_arg.typeinfo)
-      if not isinstance(base_t, mupas_types.ScalarNumber): raise RuntimeError(
-          f"A value of type {type(compiled_arg.typeinfo)} can't be negated "
-          'for the 4050 BASIC target with the unary - operator')
+      if not isinstance(base_t, mupas_types.ScalarNumber):
+        raise RuntimeError(
+            f"A value of type {type(compiled_arg.typeinfo)} can't be negated "
+            'for the 4050 BASIC target with the unary - operator')
 
       if compiled_arg.is_literal:
         # For literal values, we can do the negation in Python, and the result
@@ -1277,11 +1295,15 @@ def exp_expression_binary(
     if not (isinstance(typeinfo_left, _ARRAY_TYPES) and
             isinstance(typeinfo_right, _ARRAY_TYPES)): return
     # Array dimensionality must match.
-    if type(typeinfo_left) != type(typeinfo_right): fail()  # 1-D or 2-D?
+    # pylint: disable=unidiomatic-typecheck
+    if type(typeinfo_left) != type(typeinfo_right):  # 1-D or 2-D?
+      fail()
+    # pylint: enable=unidiomatic-typecheck
     if isinstance(typeinfo_left, mupas_types.Array1d):  # If 1-D, check size.
       dim = lambda t: (
           t.index_typeinfo.upper_bound - t.index_typeinfo.lower_bound)
-      if dim(typeinfo_left) != dim(typeinfo_right): fail()
+      if dim(typeinfo_left) != dim(typeinfo_right):
+        fail()
     else:  # If 2-D, check height and width.
       rows = lambda t: (
           t.row_index_typeinfo.upper_bound - t.row_index_typeinfo.lower_bound)
@@ -1301,16 +1323,15 @@ def exp_expression_binary(
     # the base type matters and the "enclosing type" is ultimately discarded.
     base_t_left = get_base_typeinfo(typeinfo_left)
     base_t_right = get_base_typeinfo(typeinfo_right)
-    base_ts = (base_t_left, base_t_right)
     enclosing_t = (typeinfo_left if isinstance(typeinfo_left, _ARRAY_TYPES) else
                    typeinfo_right)
     # Now do some checks.
     dual_array_arguments_compatibility_check(typeinfo_left, typeinfo_right)
     if isinstance(enclosing_t, _ARRAY_TYPES):  # Does op work on arrays?
-      if op in (pascal_parser.BinaryOp.DIVIDE_TO_INT,
-                pascal_parser.BinaryOp.MODULO): raise RuntimeError(
-          f"Binary operation {op} isn't available for arrays for the 4050 "
-          'BASIC target')  # ...because they are hybrid operations.
+      if op in (pascal_parser.BinaryOp.DIVIDE_TO_INT,  # These ones don't,
+                pascal_parser.BinaryOp.MODULO):  # since they are multi-step.
+        raise RuntimeError(f"Binary operation {op} isn't available for "
+                           'arrays for the 4050 BASIC target')
     # Finally, compute the type of the expression's result.
     base_t_result: mupas_types.ScalarNumber
     if op == pascal_parser.BinaryOp.DIVIDE_TO_REAL:
@@ -1406,7 +1427,7 @@ def get_integer_constant(
   """
   # This function is an unmodified copy of an original in mupas_analyses.py,
   # unfortunately. As easy as it was to copy it here, let's leave it as a
-  # TODO to do something more elegant soon.
+  # TODO to do something more elegant soon.  # pylint: disable=fixme
   if isinstance(ast, pascal_parser.ConstantSignedInteger):
     return ast.number
   elif isinstance(ast, pascal_parser.ConstantIdentifier):
@@ -1416,9 +1437,10 @@ def get_integer_constant(
     else: raise RuntimeError(
       f'The non-integer constant {ast.text} was referenced in a place where '
       'an integer constant was expected')
-  else: raise RuntimeError(
-    'A non-integer constant was found in a place where an integer constant '
-    'was expected')
+  else:
+    raise RuntimeError(
+        'A non-integer constant was found in a place where an integer '
+        'constant was expected')
 
 
 def get_variable_storage(
@@ -1445,7 +1467,8 @@ def get_variable_storage(
     case t4050_resources.StackValue(fp_offset=fp_offset):
       stack = frame.allocator.stack_resource.variable_name
       fp = frame.allocator.frame_pointer_resource.variable_name
-      for _ in range(hops): fp = f'{stack}[{fp}-1]'
+      for _ in range(hops):
+        fp = f'{stack}[{fp}-1]'
       maybe_offset = lambda x: f'{x:+}' if x else ''
       return f'{stack}[{fp}{maybe_offset(fp_offset)}]'
     case _:
@@ -1470,15 +1493,17 @@ def extract_call_parameters(
   Returns:
     The expressions that make up the subroutine's argument list.
   """
-  if len(ast.qualifiers_and_parameters) > 1: raise RuntimeError(
-      f'Too many qualifiers on the invocation of subroutine {name} for the '
-      '4050 BASIC target')  # Remember, subroutines can't return arrays.
+  if len(ast.qualifiers_and_parameters) > 1:
+    raise RuntimeError(
+        f'Too many qualifiers on the invocation of subroutine {name} for the '
+        '4050 BASIC target')  # Remember, subroutines can't return arrays.
   qualifier = (  # Note special-case to handle no-argument subroutines.
       ast.qualifiers_and_parameters[0] if ast.qualifiers_and_parameters else
       pascal_parser.ParameterList(parameters=()))  # type: ignore  # mypy??
-  if not isinstance(qualifier, pascal_parser.ParameterList): raise RuntimeError(
-      'muPas only supports parameter list qualifiers on subroutines for the '
-      f'4050 BASIC target, not {type(qualifier)}')
+  if not isinstance(qualifier, pascal_parser.ParameterList):
+    raise RuntimeError(
+        'muPas only supports parameter list qualifiers on subroutines for the '
+        f'4050 BASIC target, not {type(qualifier)}')
   return qualifier.parameters
 
 
@@ -1487,9 +1512,11 @@ def check_call_parameters_length(
     symbol: mupas_scopes.SubroutineSymbol,
     parameters: tuple[pascal_parser.Expression],
 ):
-  if len(parameters) != len(symbol.typeinfo.parameters): raise RuntimeError(
-      f'Subroutine {name} takes {len(symbol.typeinfo.parameters)} '
-      f'parameters, not the {len(parameters)} provided.')
+  """Common to subroutine calls: make sure the number of parameters is right."""
+  if len(parameters) != len(symbol.typeinfo.parameters):
+    raise RuntimeError(
+        f'Subroutine {name} takes {len(symbol.typeinfo.parameters)} '
+        f'parameters, not the {len(parameters)} provided.')
 
 
 def setup_stack_for_subroutine_and_call(
@@ -1528,6 +1555,8 @@ def setup_stack_for_subroutine_and_call(
        subroutine is a function and keep_return_value is True. If neither is
        the case, this value is not meaningful and can be ignored/discarded.
   """
+  # pylint: disable=too-many-branches,too-many-statements  # sure, but comments!
+
   # Useful aliases and values for later.
   stack = frame.allocator.stack_resource.variable_name
   sp = frame.allocator.stack_pointer_resource.variable_name
@@ -1622,7 +1651,7 @@ def setup_stack_for_subroutine_and_call(
   # Now actually update the frame pointer to where it needs to be for the new
   # stack frame.
   code.extend(frame_init_info.setup_frame_pointer(
-      common_scope_hops=symbols.itemhops(name)))  # TODO!!
+      common_scope_hops=symbols.itemhops(name)))
 
   # Finally, advance the stack pointer to allocate stack space for any
   # stack-using local variables in the called subroutine. This completes the
@@ -1706,6 +1735,7 @@ def invoke_extension_as_statement(
   delete_info = frame.delete_info(frame[-1])  # Frame entry doesn't matter.
   frame.release_n(stack_growth)  # Bookkeeping cleanup.
   stack_pop_code = delete_info.for_n_places(stack_growth)
+  code.extend(stack_pop_code)
 
   return code
 

@@ -169,7 +169,8 @@ class Compiler(abc.ABC):
     preprocessed_source_text, quoted_constants, units = (
         preprocessor.preprocess(source_text) if source_filename is None else
         preprocessor.preprocess(source_text, file_nest=(source_filename,)))
-    if units: raise RuntimeError('muPas does not support units')
+    if units:
+      raise RuntimeError('muPas does not support units')
 
     # Parse the program.
     ast = pascal_parser.parse(preprocessed_source_text)
@@ -292,6 +293,8 @@ class Tektronix4050Compiler(Compiler):
     stack_size: Allocate an array with this many elements for the stack.
     optimise: Whether to attempt available optimisations.
   """
+  # pylint: disable=import-outside-toplevel
+
   stack_size: int = 200
   optimise: bool = False
   origin: int = 100
@@ -381,7 +384,8 @@ class Tektronix4050Compiler(Compiler):
     assembly = t4050_generator.program(
         ast, symbols, frame, quoted_constants,
         static_allocator, frame_allocator, stack_allocator, rev_call_graph)
-    if self.optimise: assembly = t4050_assembler.optimise(assembly)
+    if self.optimise:
+      assembly = t4050_assembler.optimise(assembly)
     return assembly
 
 
@@ -405,7 +409,8 @@ def main(FLAGS: argparse.Namespace):
   try:
     compiler = _compiler_classes()[FLAGS.target].from_flags(FLAGS)
   except KeyError:
-    raise ValueError(f'Unrecognised target architecture {FLAGS.target}')
+    raise ValueError(
+        f'Unrecognised target architecture {FLAGS.target}') from None
 
   # Determining what kinds of outputs are desired. Binary output is suppressed
   # if it's competing for standard output with one of the textual outputs.
@@ -429,9 +434,9 @@ def main(FLAGS: argparse.Namespace):
 
 if __name__ == '__main__':
   # Define command-line flags, including target-specific ones.
-  flags = _define_flags()
+  defined_flags = _define_flags()
   for _, compiler_class in sorted(_compiler_classes().items()):
-    compiler_class.define_flags(flags)
+    compiler_class.define_flags(defined_flags)
   # Parse flags and call main()
-  FLAGS = flags.parse_args()
-  main(FLAGS)
+  parsed_flags = defined_flags.parse_args()
+  main(parsed_flags)

@@ -33,10 +33,7 @@ class _ForCheckingType(mupas_types.Type):
 
 
 class Union(_ForCheckingType):
-  """For specifying multiple acceptable expected types.
-
-  This type class is only meant to be used 
-  """
+  """For specifying multiple acceptable expected types."""
   types: tuple[mupas_types.Type, ...]
 
   def __init__(self, *args: mupas_types.Type):
@@ -55,6 +52,7 @@ class String(_ForCheckingType):
 
   @classmethod
   def from_string(cls, string: mupas_types.String):
+    """Construct a t4050_types.String from a mupas_types.String."""
     return cls(string.length)
 
   def __str__(self) -> str:
@@ -75,11 +73,12 @@ class Array1d(_ForCheckingType):
 
   @classmethod
   def from_array1d(cls, array: mupas_types.Array1d):
+    """Construct a t4050_types.Array1d from a mupas_types.Array1d."""
     return cls(array.index_typeinfo, array.value_typeinfo)
 
   def __str__(self) -> str:
     index = str(self.index_typeinfo) if self.index_typeinfo else '...'
-    return f'ARRAY [index] OF {self.value_typeinfo}'
+    return f'ARRAY [{index}] OF {self.value_typeinfo}'
 
 
 class Array2d(_ForCheckingType):
@@ -99,6 +98,7 @@ class Array2d(_ForCheckingType):
 
   @classmethod
   def from_array2d(cls, array: mupas_types.Array2d):
+    """Construct a t4050_types.Array2d from a mupas_types.Array2d."""
     return cls(array.row_index_typeinfo,
                array.col_index_typeinfo,
                array.value_typeinfo)
@@ -126,12 +126,15 @@ def check_assignment_or_parameter_compatibility(
   Raises:
     TypeMismatch: if the types are incompatible.
   """
+  # pylint: disable=too-many-branches  # So it goes.
+
   def ord_range_check(ord_l: mupas_types.Ordinal, ord_r: mupas_types.Ordinal):
     range_l = ord_l.upper_bound - ord_l.lower_bound
     range_r = ord_r.upper_bound - ord_r.lower_bound
-    if range_l != range_r: raise TypeMismatch(
-        'Array range dimensionality mismatch in parameter passing or '
-        f'assignment: {range_l} elements instead of {range_r}')
+    if range_l != range_r:
+      raise TypeMismatch(
+          'Array range dimensionality mismatch in parameter passing or '
+          f'assignment: {range_l} elements instead of {range_r}')
 
   def mismatch_fail():
     raise TypeMismatch(f'Found {actual} where type {expected} was expected')
@@ -140,10 +143,10 @@ def check_assignment_or_parameter_compatibility(
   match expected:
     # Union of types.
     case Union(types=types):
-      for t in types:
+      for mupas_type in types:
         try:
-          check_assignment_or_parameter_compatibility(t, actual)
-          return  # Successful type match against union element; can return.
+          check_assignment_or_parameter_compatibility(mupas_type, actual)
+          break  # Successful type match against union element; can return.
         except TypeMismatch:
           pass  # This match failed; try again.
       else:
@@ -160,7 +163,8 @@ def check_assignment_or_parameter_compatibility(
                                  value_typeinfo=r_value):
           # 1-D array assignment to 1-D array.
           check_assignment_or_parameter_compatibility(l_value, r_value)
-          if l_index is not None: ord_range_check(l_index, r_index)
+          if l_index is not None:
+            ord_range_check(l_index, r_index)
         case mupas_types.ScalarNumber:
           # Scalar assignment to 1-D array.
           check_assignment_or_parameter_compatibility(l_value, actual)
@@ -182,8 +186,10 @@ def check_assignment_or_parameter_compatibility(
                                  value_typeinfo=r_value):
           # 2-D array assignment to 2-D array.
           check_assignment_or_parameter_compatibility(l_value, r_value)
-          if l_row is not None: ord_range_check(l_row, r_row)
-          if l_col is not None: ord_range_check(l_col, r_col)
+          if l_row is not None:
+            ord_range_check(l_row, r_row)
+          if l_col is not None:
+            ord_range_check(l_col, r_col)
         case mupas_types.ScalarNumber:
           # Scalar assignment to 2-D array.
           check_assignment_or_parameter_compatibility(l_value, actual)
@@ -200,10 +206,11 @@ def check_assignment_or_parameter_compatibility(
       match actual:
         case mupas_types.String(length=r_len):
           # String assignment to a string.
-          if l_len is not None and r_len > l_len: warnings.warn(
-              f'Using a string of size {r_len} where a string of size {l_len} '
-              f'is expected may cause errors if the string is longer than '
-              f'{l_len} characters')
+          if l_len is not None and r_len > l_len:
+            warnings.warn(
+                f'Using a string of size {r_len} where a string of size '
+                f'{l_len} is expected may cause errors if the string is '
+                f'longer than {l_len} characters')
         case _:
           # Anything else to string.
           mismatch_fail()
@@ -216,21 +223,24 @@ def check_assignment_or_parameter_compatibility(
       # Real to anything not real or more generic.
       elif isinstance(actual, mupas_types.Real):
         if not isinstance(expected, (mupas_types.Real,
-                                     mupas_types.ScalarNumber)): warnings.warn(
-            f'Using an {actual} value in a {expected} context could result in '
-            'ordinal values no longer being made of integers; consider an '
-            'explicit conversion or cast')
+                                     mupas_types.ScalarNumber)):
+          warnings.warn(
+              f'Using an {actual} value in a {expected} context could result '
+              'in ordinal values no longer being made of integers; consider '
+              'an explicit conversion or cast')
       # Ordinal to ordinal.
       elif (isinstance(expected, mupas_types.Ordinal) and
             isinstance(actual, mupas_types.Ordinal)):
         alb, aub = actual.lower_bound, actual.upper_bound
         # Only check bounds if the expected type is a proper Ordinal subclass.
+        # pylint: disable=unidiomatic-typecheck  # <-- Which requires this.
         if type(expected) != mupas_types.Ordinal:
           elb, eub = expected.lower_bound, expected.upper_bound
-          if alb < elb or aub > eub: warnings.warn(
-              f'Using a {actual} (which can have values in {alb}..{aub}) in a '
-              f'{expected} (which can have values in {elb}..{eub}) context; '
-              'consider an explicit conversion or cast.')
+          if alb < elb or aub > eub:
+            warnings.warn(
+                f'Using a {actual} (which can have values in {alb}..{aub}) in '
+                f'a {expected} (which can have values in {elb}..{eub}) '
+                'context; consider an explicit conversion or cast.')
 
 
 class TypeMismatch(RuntimeError):

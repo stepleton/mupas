@@ -113,8 +113,9 @@ class StaticAllocator(mupas_static.Allocator):
       # Code for dimensioning string variables.
       if isinstance(typeinfo, mupas_types.String):
         assert isinstance(self._resource, StringVariable)
-        if not 1 <= typeinfo.length <= 65530: raise ValueError(
-          f'String size of {typeinfo.length} is not in 1..65530')
+        if not 1 <= typeinfo.length <= 65530:
+          raise ValueError(
+              f'String size of {typeinfo.length} is not in 1..65530')
         return [f'      DIM {self._resource.variable_name}({typeinfo.length})']
 
       # For dimensioning 1-D arrays.
@@ -122,8 +123,8 @@ class StaticAllocator(mupas_static.Allocator):
         assert isinstance(self._resource, NumericVariable)
         i_typeinfo = typeinfo.index_typeinfo
         size = i_typeinfo.upper_bound - i_typeinfo.lower_bound + 1
-        if not 1 <= size <= 8191: raise ValueError(
-          f'Array size of {size} is not in 1..8191')
+        if not 1 <= size <= 8191:
+          raise ValueError(f'Array size of {size} is not in 1..8191')
         return [f'      DIM {self._resource.variable_name}({size})']
 
       # For dimensioning 2-D arrays.
@@ -133,8 +134,9 @@ class StaticAllocator(mupas_static.Allocator):
         ci_typeinfo = typeinfo.col_index_typeinfo
         rows = ri_typeinfo.upper_bound - ri_typeinfo.lower_bound + 1
         cols = ci_typeinfo.upper_bound - ci_typeinfo.lower_bound + 1
-        if not (1 <= rows <= 8191 and 1 <= cols <= 8191): raise ValueError(
-          f'Array size of {rows},{cols} is not in 1..8191,1..8191')
+        if not (1 <= rows <= 8191 and 1 <= cols <= 8191):
+          raise ValueError(
+              f'Array size of {rows},{cols} is not in 1..8191,1..8191')
         return [f'      DIM {self._resource.variable_name}({rows},{cols})']
 
       # Storage initialisation is not required for scalars.
@@ -157,23 +159,23 @@ class StaticAllocator(mupas_static.Allocator):
       assert isinstance(self._resource, (StringVariable, NumericVariable))
       return [f'      DEL {self._resource.variable_name}']
 
-  def allocate(self, typeinfo: mupas_types.Type) -> mupas_static.Value:
+  def allocate(self, mupas_type: mupas_types.Type) -> mupas_static.Value:
     # Strings go in string variables.
-    if isinstance(typeinfo, mupas_types.String):
+    if isinstance(mupas_type, mupas_types.String):
       try:
         return self._string_variables.pop()
       except IndexError:
-        raise RuntimeError('Ran out of BASIC string variables')
+        raise RuntimeError('Ran out of BASIC string variables') from None
     # Numeric values go in numeric variables.
-    elif isinstance(typeinfo, (mupas_types.ScalarNumber,
-                               mupas_types.Array1d, mupas_types.Array2d)):
+    elif isinstance(mupas_type, (mupas_types.ScalarNumber,
+                                 mupas_types.Array1d, mupas_types.Array2d)):
       try:
         return self._numeric_variables.pop()
       except IndexError:
-        raise RuntimeError('Ran out of BASIC numeric/array variables')
+        raise RuntimeError('Ran out of BASIC numeric/array variables') from None
     else:
       raise RuntimeError(
-          f"No storage mechanism for {type(typeinfo)} (shouldn't happen)")
+          f"No storage mechanism for {type(mupas_type)} (shouldn't happen)")
 
   def release(self, resource: mupas_static.Value):
     if isinstance(resource, NumericVariable):
@@ -195,11 +197,11 @@ class StaticAllocator(mupas_static.Allocator):
 def all_numeric_variables() -> list[NumericVariable]:
   """Assemble all numeric variables available in Tek 4050 BASIC."""
   variables = []
-  for c in string.ascii_uppercase:
-    variables.append(NumericVariable(c))
-  for c in string.ascii_uppercase:
-    for d in string.digits:
-      variables.append(NumericVariable(c + d))
+  for char in string.ascii_uppercase:
+    variables.append(NumericVariable(char))
+  for char in string.ascii_uppercase:
+    for digit in string.digits:
+      variables.append(NumericVariable(char + digit))
   return variables
 
 
@@ -276,9 +278,9 @@ class Frame(mupas_stack.Frame):
     def __init__(self, frame):
       self._sp = frame.allocator.stack_pointer_resource.variable_name
 
-    def for_n_places(self, n: int) -> list[str]:
-      return [] if n == 0 else [f'      {self._sp}={self._sp}{-n:+}']
-      
+    def for_n_places(self, places: int) -> list[str]:
+      """Code for shrinking the stack frame by several places."""
+      return [] if places == 0 else [f'      {self._sp}={self._sp}{-places:+}']
 
   def __getitem__(self, position: int) -> StackValue:
     value = self._stack_values[position]
@@ -339,13 +341,13 @@ class Frame(mupas_stack.Frame):
     """
     return self._allocate_n(1)
 
-  def _allocate_n(self, n) -> int:
+  def _allocate_n(self, num_entries) -> int:
     """Implementation backing the `allocate_for*` methods."""
     result = len(self._stack_values)
     top_of_stack = self._stack_values[-1]
     assert top_of_stack is not None  # Return addr shouldn't be here.
     self._stack_values.extend(
-      StackValue(top_of_stack.fp_offset + 1 + i) for i in range(n))
+      StackValue(top_of_stack.fp_offset + 1 + i) for i in range(num_entries))
     return result
 
   def release_for_procedure_call(self, num_parameters: int):
@@ -360,12 +362,14 @@ class Frame(mupas_stack.Frame):
     """Undo most allocations `for_function_call` and `subroutine_parameter`s"""
     self.release_n(2 + num_parameters)
 
-  def release_n(self, n):
+  def release_n(self, num_entries):
     """Implementation backing the release_for* methods."""
-    if len(self._stack_values) - n < self._original_len: raise RuntimeError(
-        "Can't release stack frame entries that weren't allocated by the "
-        'allocate_one method.')
-    if n > 0: self._stack_values[-n:] = []
+    if len(self._stack_values) - num_entries < self._original_len:
+      raise RuntimeError(
+          "Can't release stack frame entries that weren't allocated by the "
+          'allocate_one method.')
+    if num_entries > 0:
+      self._stack_values[-num_entries:] = []
 
   def init_info(self, resource: mupas_stack.Value) -> InitInfo:
     del resource  # Unused in the current implementation.
@@ -464,12 +468,10 @@ class FrameAllocator(mupas_stack.FrameAllocator):
               self._enclosing_context_fp_offset is not None), (
           'setup_frame_pointer() was called before stack maintenance offsets '
           'were marked with mark_stack_maintenance_offsets()')
-        
+
       # Shorthand.
       stack = self._frame.allocator.stack_resource.variable_name
-      sp = self._frame.allocator.stack_pointer_resource.variable_name
       fp = self._frame.allocator.frame_pointer_resource.variable_name
-      locals_pos = self._frame.locals_position
 
       # Assuming the stack pointer now points just beyond the last parameter
       # for the new function (which is where we need it to be), here are steps
@@ -558,7 +560,8 @@ class FrameAllocator(mupas_stack.FrameAllocator):
     # relative to the frame pointer.
     assert locals_position is not None  # We have to have seen the ret. addr.
     for item in storage:
-      if isinstance(item, StackValue): item.fp_offset -= locals_position
+      if isinstance(item, StackValue):
+        item.fp_offset -= locals_position
 
     # Return a Frame that contains this allocated storage.
     return Frame(self, storage, locals_position)

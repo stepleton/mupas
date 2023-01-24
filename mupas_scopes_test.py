@@ -9,6 +9,7 @@ import mupas_scopes
 
 
 class MupasScopesTest(unittest.TestCase):
+  """Test harness for testing the mupas_scopes module."""
 
   def test_single_scope(self):
     """Check insertion/retrival/removal/etc. for just one scope."""
@@ -79,17 +80,17 @@ class MupasScopesTest(unittest.TestCase):
     """Check parent/child bookkeeping within BiScopes."""
 
     parent : mupas_scopes.BiScope[int] = mupas_scopes.BiScope('Parent')
-    c1 : mupas_scopes.BiScope[int] = mupas_scopes.BiScope('C1', parent=parent)
-    c2 : mupas_scopes.BiScope[int] = mupas_scopes.BiScope('C2', parent=parent)
+    c_1 : mupas_scopes.BiScope[int] = mupas_scopes.BiScope('C1', parent=parent)
+    c_2 : mupas_scopes.BiScope[int] = mupas_scopes.BiScope('C2', parent=parent)
 
-    self.assertDictEqual(parent.children, {'C1': c1, 'C2': c2})
+    self.assertDictEqual(parent.children, {'C1': c_1, 'C2': c_2})
 
     with self.assertRaisesRegex(KeyError, '/Parent already has a child scope'):
       _ = mupas_scopes.BiScope('C1', parent=parent)
 
     self.assertEqual(parent.get_scope('/Parent'), parent)
-    self.assertEqual(parent.get_scope('/Parent/C1'), c1)
-    self.assertEqual(parent.get_scope('/Parent/C2'), c2)
+    self.assertEqual(parent.get_scope('/Parent/C1'), c_1)
+    self.assertEqual(parent.get_scope('/Parent/C2'), c_2)
     with self.assertRaisesRegex(KeyError, 'No scope /Uncle within Parent'):
       parent.get_scope('/Uncle')
     with self.assertRaisesRegex(KeyError, 'No scope /Parent/C4 within Parent'):

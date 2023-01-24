@@ -155,7 +155,8 @@ def optimise(source: Sequence[str]) -> list[str]:
     if lines_incs:
       indent, var = lines_incs[0].groups()[:2]
       crement = sum(int(m.group(3)) for m in lines_incs)
-      if crement: lines_out.append(f'{indent}{var}={var}{crement:+}')
+      if crement:
+        lines_out.append(f'{indent}{var}={var}{crement:+}')
       lines_incs[:] = []
   def flush_lines_dels():
     if lines_dels:
@@ -174,18 +175,22 @@ def optimise(source: Sequence[str]) -> list[str]:
         flush_lines_incs()
       lines_incs.append(match_incs)
     # We've got a deletion. Accumulate it.
-    if match_dels := re_dels.fullmatch(line): lines_dels.append(match_dels)
+    if match_dels := re_dels.fullmatch(line):
+      lines_dels.append(match_dels)
     # If we've been accumulating autoincrements and we now have a line that
     # isn't an autoincrement, then flush what we've accumulated.
     if lines_incs:
-      if not match_incs: flush_lines_incs()
+      if not match_incs:
+        flush_lines_incs()
     # If we've been accumulating deletions and we now have a line that isn't
     # a deletion, then flush what we've accumulated.
     if lines_dels:
-      if not match_dels: flush_lines_dels()
+      if not match_dels:
+        flush_lines_dels()
     # And if we haven't got an autoincrement or a deletion, then just pass it
     # through.
-    if not (match_incs or match_dels): lines_out.append(line)
+    if not (match_incs or match_dels):
+      lines_out.append(line)
   # Final flushes if we've reached the end of the code.
   flush_lines_incs()
   flush_lines_dels()
@@ -204,6 +209,8 @@ def assemble(source: Sequence[str]) -> bytes:
   Returns:
     "Compiled" BASIC code, ready for use with 4050-series machines.
   """
+  # pylint: disable=too-many-branches,too-many-nested-blocks  # A fair cop.
+
   # NOMENCLATURE NOTE: In this function, "num" is a variable that holds the
   # current line number of the source code input, and "line_number" refers to
   # the BASIC line number in the assembled source code.
@@ -231,12 +238,12 @@ def assemble(source: Sequence[str]) -> bytes:
 
   for num, line in enumerate(source):
     # Parse labels and/or statements in the source line.
-    m = split_regex.fullmatch(line)  # Always matches.
-    assert m is not None             # So this is for mypy.
-    label, statement = m.groups()
+    matched = split_regex.fullmatch(line)  # Always matches.
+    assert matched is not None             # So this is for mypy.
+    label, statement = matched.groups()
     # If a label is defined here, check its validity.
-    if label and not label_regex.fullmatch(label): raise ValueError(
-        f'Illegal label on line {num}: "{label}"')
+    if label and not label_regex.fullmatch(label):
+      raise ValueError(f'Illegal label on line {num}: "{label}"')
     labels_and_statements.append((label, statement))
 
   ### Step 2: Classic assembler "first pass": determine the BASIC line number
@@ -267,8 +274,9 @@ def assemble(source: Sequence[str]) -> bytes:
       r'(?:[^\|]+|\|[\w]+\|)')   # Runs surrounded by |, or anything else.
 
   for num, line_number, statement in line_numbers_and_statements:
-    if statement.count('"') % 2: raise ValueError(
-        f"Unterminated string constant on line {num}: '{statement}'")
+    if statement.count('"') % 2:
+      raise ValueError(
+          f"Unterminated string constant on line {num}: '{statement}'")
     parts = quote_regex.findall(statement)  # Break statement into "parts".
     final_parts: list[str] = []  # Processed parts to accumulate in here.
 
@@ -276,8 +284,9 @@ def assemble(source: Sequence[str]) -> bytes:
       if part.startswith('"'):    # Parts that are string constants we...
         final_parts.append(part)  # pass through without processing.
       else:  # Other parts we scan for potential label substitution.
-        if part.count('|') % 2: raise ValueError(
-            f'Unterminated label invocation on line {num}: "{part}"')
+        if part.count('|') % 2:
+          raise ValueError(
+              f'Unterminated label invocation on line {num}: "{part}"')
         subparts = label_regex.findall(part)  # Break part into "subparts".
         final_subparts: list[str] = []  # Same accumulation gimmick here.
 
@@ -288,8 +297,8 @@ def assemble(source: Sequence[str]) -> bytes:
               final_subparts.append(str(label_to_line_number[label]))
             except KeyError:
               raise ValueError(
-                f'Invocation of undefined label "{label}" on line {num}: '
-                f'{statement}')
+                  f'Invocation of undefined label "{label}" on line {num}: '
+                  f'{statement}') from None
           else:  # Or just pass through parts that aren't label invocations.
             final_subparts.append(subpart)
 
@@ -363,11 +372,12 @@ class _LineNumberer:
       # Try to parse the number in this directive.
       try:
         amount = int(parts[1])
-        if amount < 1: raise ValueError()
+        if amount < 1:
+          raise ValueError
       except (ValueError, IndexError):
         raise ValueError(
-          f'Illegal or missing numeric value in {parts[0].upper()} directive '
-          f'on line {num} "{statement}"')
+            f'Illegal or missing numeric value in {parts[0].upper()} directive '
+            f'on line {num} "{statement}"') from None
       # The number parses well, so handle the directive.
       if parts[0].upper() == 'ORG':
         self.next_line_number = amount
@@ -396,11 +406,12 @@ def main(FLAGS: argparse.Namespace):
   # Read in source, assemble, and write to the output. We're not doing this
   # in a way that uses memory efficiently, which is fine.
   code = FLAGS.source.read().splitlines()
-  if FLAGS.optimise: code = optimise(code)
+  if FLAGS.optimise:
+    code = optimise(code)
   FLAGS.output.write(assemble(code))
 
 
 if __name__ == '__main__':
-  flags = _define_flags()
-  FLAGS = flags.parse_args()
-  main(FLAGS)
+  defined_flags = _define_flags()
+  parsed_flags = defined_flags.parse_args()
+  main(parsed_flags)

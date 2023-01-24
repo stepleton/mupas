@@ -17,6 +17,9 @@ At the bottom of the module is some rudimentary infrastructure for aiding
 pretty-printing: this may be useful for extending the parser or for
 implementing code generators for different architectures.
 """
+# pylint: disable=invalid-name  # Unhelpful for Lark transformers.
+# pylint: disable=missing-function-docstring  # Unhelpful for Lark transformers.
+# pylint: disable=no-self-use  # Unhelpful for Lark transformers.
 
 import dataclasses
 import enum
@@ -77,7 +80,6 @@ class Identifier(AstNode):
   """Leaf node for identifiers."""
   text: str
 
-# TODO: Move somewhere else.
 @dataclasses.dataclass
 class NameAndType(AstNode):
   """Node that associates a type to a name."""
@@ -248,6 +250,7 @@ class TypeRecordVariant(AstNode):
 
 @dataclasses.dataclass
 class TypeRecordVariantPart(AstNode):
+  """Node for variant parts of record types."""
   tag_identifier: Optional[Identifier]
   tag_field_type: 'Type'
   variants: tuple[TypeRecordVariant, ...]
@@ -347,10 +350,12 @@ class SubroutineBodyForward(SubroutineBody):
 
 @dataclasses.dataclass
 class MethodFunctionHeading(FunctionHeading):
+  """Leaf node for function headings."""
   class_identifier: str
 
 @dataclasses.dataclass
 class MethodProcedureHeading(ProcedureHeading):
+  """Leaf node for procedure headings."""
   class_identifier: str
 
 
@@ -619,7 +624,7 @@ class DigitSequence(AstNode):
 
 @dataclasses.dataclass
 class Nil(AstNode):
-  pass
+  """Leaf node for Nil."""
 
 @dataclasses.dataclass
 class QuotedConstant(AstNode):
@@ -855,9 +860,11 @@ class _TransformerSubroutineDefinitionMixin:
   subroutine_body_block = lark.v_args(inline=True)(SubroutineBodyBlock)
 
   def subroutine_body_external(self, items):
+    del items  # Unused
     return SubroutineBodyExternal()
 
   def subroutine_body_forward(self, items):
+    del items  # Unused
     return SubroutineBodyForward()
 
 
@@ -1014,9 +1021,11 @@ class _TransformerTypeMixin(_TransformerRecordAndClassTypeMixin):
         value_type=items[-1])
 
   def boolean_type_identifier(self, items):
+    del items  # Unused
     return TypeBoolean()
 
   def char_type_identifier(self, items):
+    del items  # Unused
     return TypeChar()
 
   enumerated_type = lark.v_args(inline=True)(TypeEnumerated)
@@ -1029,14 +1038,17 @@ class _TransformerTypeMixin(_TransformerRecordAndClassTypeMixin):
     return tuple(ident.text for ident in ids_list)
 
   def integer_type_identifier(self, items):
+    del items  # Unused
     return TypeInteger()
 
   def longint_type_identifier(self, items):
+    del items  # Unused
     return TypeLongint()
 
   pointer_type = lark.v_args(inline=True)(TypePointer)
 
   def real_type_identifier(self, items):
+    del items  # Unused
     return TypeReal()
 
   @lark.v_args(inline=True)
@@ -1066,6 +1078,7 @@ class _TransformerLiteralMixin:
     return DigitSequence(text, int(text, base=16))
 
   def nil(self, items):
+    del items  # Unused
     return Nil()
 
   def quoted_constant(self, items):
@@ -1111,6 +1124,7 @@ class _TransformerLiteralMixin:
     return UnsignedReal(float(f'{integer_part.text}{scale_factor}'))
 
 
+# pylint: disable=too-many-ancestors
 class _Transformer(_TransformerProgramAndUnitMixin,
                    _TransformerLabelPartMixin,
                    _TransformerConstPartMixin,
@@ -1134,6 +1148,7 @@ class _Transformer(_TransformerProgramAndUnitMixin,
   @lark.v_args(inline=True)
   def start(self, program_or_unit):
     return program_or_unit
+# pylint: enable=too-many-ancestors
 
 
 @dataclasses.dataclass

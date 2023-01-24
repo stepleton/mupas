@@ -68,10 +68,10 @@ def check_parse_tree(ast: pascal_parser.Program):
   Raises:
     RuntimeError: a simplifying assumption has been violated.
   """
-  if ast.parameters is not None: raise RuntimeError(
-      'muPas programs cannot take parameters')
-  if ast.uses_clause is not None: raise RuntimeError(
-      'muPas programs cannot have a USES clause')
+  if ast.parameters is not None:
+    raise RuntimeError('muPas programs cannot take parameters')
+  if ast.uses_clause is not None:
+    raise RuntimeError('muPas programs cannot have a USES clause')
   block = ast.block  # Isolate the main program block for analysis.
 
   # muPas does not support sets, records, files, or pointers.
@@ -107,6 +107,7 @@ def get_symbols(
     A nested symbol table containing all symbols declared in the program.
     This includes constant values and values of enumerated types.
   """
+  # pylint: disable=too-many-statements
 
   # A note about how this function works: as it recurses into the parse tree,
   # it builds up definitions of types and symbols into two respective tables.
@@ -153,6 +154,7 @@ def get_symbols(
     assert isinstance(ast, pascal_parser.ConstantDeclarationPart)
     del todos  # Unused
     types, symbols = state
+    del types  # Unused
     for declaration in ast.declarations:
       name, value = declaration.text, declaration.value
       match value:
@@ -353,7 +355,6 @@ def get_symbols(
       ast: pascal_parser.AstNode,
       state: DescentState, todos: DescentTodos):
     assert isinstance(ast, pascal_parser.Block)
-    types, symbols = state
     # Append in reverse order since the scan() queue is a LIFO.
     if ast.procedure_and_function_definition_part is not None:
       todos.append((bind_subroutine_definitions,
@@ -373,7 +374,8 @@ def get_symbols(
   root_symbols = mupas_scopes.SymbolScope(name=ast.text)
   root_state = (root_types, root_symbols)
   if extras is not None:
-    for name, symbol in extras.items(): root_symbols[name] = symbol
+    for name, symbol in extras.items():
+      root_symbols[name] = symbol
   mupas_descent.scan(descend_into_block, ast.block, root_state)
 
   return root_symbols
@@ -408,9 +410,9 @@ def get_call_graph(
             pascal_parser.AstNode, mupas_scopes.SymbolScope]]
 
   # Check whether we have the correct symbol table for this program.
-  if ast.text != symbols.name: raise ValueError(
-      f"The {symbols.name} symbol table doesn't seem to match the program "
-      f'{ast.text}.')
+  if ast.text != symbols.name:
+    raise ValueError(f"The {symbols.name} symbol table doesn't seem to match "
+                     f'the program {ast.text}.')
 
   # We'll be scanning the subroutines (or, initially, program) accumulated in
   # to_process in order to build out the call graph.
@@ -435,6 +437,7 @@ def get_call_graph(
         assert isinstance(definition, (pascal_parser.ProcedureDefinition,
                                        pascal_parser.FunctionDefinition))
         to_process.append((called_path, definition.body))
+      # pylint: disable=fixme
       # TODO: Place other symbols with blocks here if you extend the language.
 
     # Recursing into the program in a way that avoids mistaking function return
@@ -494,7 +497,8 @@ def get_reverse_transitive_call_graph(
     for callees in rev_call_graph.values():
       for callee in list(callees):  # Copy list since we might modify it.
         callees |= rev_call_graph[callee]
-    if sets_size == (new_sets_size := get_sets_size()): break
+    if sets_size == (new_sets_size := get_sets_size()):
+      break
     sets_size = new_sets_size
 
   return rev_call_graph
@@ -557,13 +561,14 @@ def add_static_resources(
   # store those in any kind of dynamic memory (e.g. a stack or a heap). So,
   # make sure they don't have those things.
   recursives = set(k for k, v in rev_call_graph.items() if k in v)
-  for r in recursives:
+  for r in recursives:  # pylint: disable=invalid-name
     sub_symbols = symbols.get_scope(r)
     bad_bindings = sorted(k for k, v in sub_symbols.bindings.items()
                           if is_string_or_array_variable(v))
-    if bad_bindings: raise RuntimeError(
-        f"Subroutine {r} could call itself recursively, which means it can't "
-        f'declare array/string variables like {", ".join(bad_bindings)}.')
+    if bad_bindings:
+      raise RuntimeError(
+          f"Subroutine {r} could call itself recursively, which means it can't "
+          f'declare array/string variables like {", ".join(bad_bindings)}.')
 
   # The recursive subroutines are our first "retired" subroutines --- that is,
   # we don't have to think about them anymore.
@@ -586,9 +591,9 @@ def add_static_resources(
     clusters: list[set[str]] = []
     for k, v in rev_call_graph.items():
       if subset := set.union({k}, v) & paths:  # Join key and value in 1 entry.
-        for c in clusters:
-          if c & subset:  # If this subset overlaps a cluster...
-            c |= subset   # ...add the subset to the cluster.
+        for cluster in clusters:
+          if cluster & subset:  # If this subset overlaps a cluster...
+            cluster |= subset   # ...add the subset to the cluster.
             break
         else:
           clusters.append(subset)  # Otherwise start a new cluster.
@@ -597,7 +602,7 @@ def add_static_resources(
   # Helper: identify scope paths in a set of scope paths that have no callers
   # listed in the reverse call graph, not counting any elements in retired.
   def rev_call_graph_roots(paths: set[str]) -> set[str]:
-    return {p for p in paths if not (set(rev_call_graph[p]) - retired)}
+    return {p for p in paths if not set(rev_call_graph[p]) - retired}
 
   # Helper: recursion for assigning storage resources to string and array
   # variables in the call stack. The recursion works by considering clusters:
@@ -606,7 +611,7 @@ def add_static_resources(
   # Consider the call graph --- a DAG since we're restricting to subroutines
   # that don't participate in recursion. The first cluster is the entire DAG.
   # We assign storage resources for subroutines in the cluster that aren't
-  # called by any other subroutine in the cluster --- so-called "roots". 
+  # called by any other subroutine in the cluster --- so-called "roots".
   #
   # We then remove those subroutines from the DAG and identify connected
   # components in what remains: the recursion analyses those sub-clusters next.
@@ -629,10 +634,12 @@ def add_static_resources(
             v.storage = resource
 
       # Recurse into subclusters of this cluster.
-      for subc in rev_call_graph_clusters(cluster - roots): rec(subc)
+      for subc in rev_call_graph_clusters(cluster - roots):
+        rec(subc)
 
       # Release all allocated symbols for string and array variables.
-      for resource in resources: allocator.release(resource)
+      for resource in resources:
+        allocator.release(resource)
 
   # Start the recursion on clusters of all non-retired scope paths in the
   # program: allocate global storage resources for all string and array
@@ -712,7 +719,8 @@ def add_stack_resources(
     frame_types.append(mupas_types.DataPointer())  # Enclosing scope pointer.
 
     for parameter in typeinfo.parameters:  # Next, subroutine parameters.
-      if not parameter.reference: frame_types.append(parameter.typeinfo)
+      if not parameter.reference:
+        frame_types.append(parameter.typeinfo)
     parameter_names = {p.name for p in typeinfo.parameters}  # For later.
 
     for k, v in symbols.bindings.items():  # Finally, local variables.

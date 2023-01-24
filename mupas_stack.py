@@ -38,7 +38,7 @@ class Value(mupas_resources.Value):
 
 
 class Frame(abc.ABC, mupas_resources.Frame):
-  """Superclass for bookkeeping around data stored in stack frames.
+  r"""Superclass for bookkeeping around data stored in stack frames.
 
   There are no "allocate" or "release" methods: this model assumes that space
   for stack frames and their value contents is allocated and released all at
@@ -97,7 +97,6 @@ class Frame(abc.ABC, mupas_resources.Frame):
 
     Returns: as described.
     """
-    pass
 
   @abc.abstractmethod
   def delete_info(self, resource: Value) -> DeleteInfo:
@@ -108,7 +107,6 @@ class Frame(abc.ABC, mupas_resources.Frame):
 
     Returns: as described.
     """
-    pass
 
 
 class FrameAllocator(abc.ABC):
@@ -135,22 +133,18 @@ class FrameAllocator(abc.ABC):
   @abc.abstractmethod
   def allocate(self, mupas_typeinfos: Collection[mupas_types.Type]) -> Frame:
     """Claim resources for a stack frame containing certain values."""
-    pass
 
   @abc.abstractmethod
   def release(self, resource: Frame):
     """Indicate that resources for a stack frame are no longer needed."""
-    pass
 
   @abc.abstractmethod
   def init_info(self, resource: Frame) -> InitInfo:
     """Retrieve information about initialising a stack frame."""
-    pass
 
   @abc.abstractmethod
   def delete_info(self, resource: Frame) -> DeleteInfo:
     """Retrieve information about how to retire a stack frame."""
-    pass
 
 
 class StackAllocator(abc.ABC):
@@ -177,19 +171,15 @@ class StackAllocator(abc.ABC):
   @abc.abstractmethod
   def allocate(self) -> FrameAllocator:
     """Claim resources for a stack."""
-    pass
 
   @abc.abstractmethod
   def release(self, resource: FrameAllocator):
     """Indicate that resources for a stack are no longer needed."""
-    pass
 
   @abc.abstractmethod
   def init_info(self, resource: FrameAllocator) -> InitInfo:
     """Retrieve information about initialising a stack."""
-    pass
 
   @abc.abstractmethod
   def delete_info(self, resource: FrameAllocator) -> DeleteInfo:
     """Retrieve information about how to retire a stack."""
-    pass

@@ -21,11 +21,16 @@ TScanTodos = list[
 
 
 class Callback(Protocol[TResult, TState]):
+  """A function signature for callbacks used by `scan`.
+
+  See `__call__` docstring for details.
+  """
+
   def __call__(self,
                ast: pascal_parser.AstNode,
                state: TState,
                todos: TScanTodos) -> TResult:
-    """A function signature for callbacks used by scan.
+    """A function signature for callbacks used by `scan`.
 
     Args:
       ast: Current parse tree node encountered in the traversal.
@@ -86,6 +91,7 @@ class Stop(Exception, Generic[TResult]):
 
   def __init__(self, payload: TResult):
     """Initialise with a value that the scan should return."""
+    super().__init__()
     self.payload = payload
 
 
@@ -120,9 +126,9 @@ def depth_first(callback: Callable[[pascal_parser.AstNode, TState], TResult],
     """Adapts the callback to a more complicated `scan` callback."""
     try:
       result = callback(ast, state)  # Try calling the user's callback.
-    except Stop as s:                # If the callback wants to abort the scan,
+    except Stop as stop:             # If the callback wants to abort the scan,
       del todos[:]                   # Clear all next items to scan.
-      return s.payload               # type: ignore  # Return exception payload.
+      return stop.payload            # type: ignore  # Return exception payload.
     else:                            # But if the callback returned normally:
       # Schedule iteration into all child nodes of this parse tree node. We say
       # reversed because `children()` occasionally returns a list of things

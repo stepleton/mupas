@@ -38,6 +38,7 @@ def parse(source_text: str) -> pascal_parser.AstNode:
 
 
 class MupasDescentTest(unittest.TestCase):
+  """Test harness for testing the mupas_descent module."""
 
   def test_depth_first(self):
     """Basic operation of the depth-first simplified scanner."""
@@ -63,7 +64,8 @@ class MupasDescentTest(unittest.TestCase):
       if isinstance(ast, (pascal_parser.QuotedConstant,
                           pascal_parser.ConstantQuotedConstant)):
         state[0] += 1
-        if ast.code_length == 8: raise mupas_descent.Stop(-6)
+        if ast.code_length == 8:
+          raise mupas_descent.Stop(-6)
       return state[0]
 
     ast = parse(SOURCE_TEXT)
@@ -111,9 +113,9 @@ class MupasDescentTest(unittest.TestCase):
 
       elif isinstance(ast, pascal_parser.ExpressionBinary):
         left_side : int = 0   # This state callable evaluates the expression's
-        def state_left(x):    # left side and stores the result in left_side.
+        def state_left(val):  # left side and stores the result in left_side.
           nonlocal left_side  # State callables for the expression's right side
-          left_side = x       # can use that value to compute their result.
+          left_side = val     # can use that value to compute their result.
           return -1  # Unused; won't be called by the last scan() callback.
         if ast.op == pascal_parser.BinaryOp.MULTIPLY:
           state_right = lambda x: state(left_side * x)

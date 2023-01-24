@@ -32,6 +32,8 @@ The extensions described here are not yet well-documented, and you may need
 to understand their implementation to gain an idea of what arguments they need,
 or to know whether they work like functions or procedures.
 """
+# pylint: disable=consider-using-f-string  # it's for clarity, I promise!
+# pylint: disable=fixme  # I know they're in here.
 
 import itertools
 import re
@@ -537,7 +539,7 @@ def _r12_prefixed_command_extensions(
              mupas_types.Real(), mupas_types.Real()]),
         f'R12{prefix}GraphicInput': _extension_procedure(
             f'R12{prefix}GraphicInput',
-            f'CAL "{prefix[0]}INPUT",''{0},{1},{2},{3},{4}', 
+            f'CAL "{prefix[0]}INPUT",''{0},{1},{2},{3},{4}',
             [t4050_types.String(), mupas_types.Integer(),
             _Constraints(mupas_types.Real(), can_be_lhs=True),
             _Constraints(mupas_types.Real(), can_be_lhs=True),
@@ -582,21 +584,21 @@ def _r12_prefixed_command_extensions(
   # patterns, mainly in service of retrieving the joystick position.
   result.update({
       'R12JoyCross': _extension_procedure(
-          f'R12JoyCross', 'CAL "JCROSS",{0},{1},{2},{3}',
+          'R12JoyCross', 'CAL "JCROSS",{0},{1},{2},{3}',
           [mupas_types.Integer(),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(t4050_types.String(),
                         is_mutable_variable=True, might_want_room_for=28)]),
       'R12JoyDots': _extension_procedure(
-          f'R12JoyDots', 'CAL "JDOTS",{0},{1},{2},{3},{4}',
+          'R12JoyDots', 'CAL "JDOTS",{0},{1},{2},{3},{4}',
           [t4050_types.String(), mupas_types.Integer(),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(t4050_types.String(),
                         is_mutable_variable=True, might_want_room_for=28)]),
       'R12JoyDraw': _extension_procedure(
-          f'R12JoyDraw', 'CAL "JDRAW",{0},{1},{2},{3},{4}',
+          'R12JoyDraw', 'CAL "JDRAW",{0},{1},{2},{3},{4}',
           [t4050_types.String(), mupas_types.Integer(),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
@@ -616,55 +618,55 @@ def _r12_prefixed_command_extensions(
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(t4050_types.String(),
                         is_mutable_variable=True, might_want_room_for=28)]),
-      f'R12JoyPoint': _extension_procedure(
-          f'R12JoyPoint', 'CAL "JPOINT",{0},{1},{2},{3},{4},{5}',
+      'R12JoyPoint': _extension_procedure(
+          'R12JoyPoint', 'CAL "JPOINT",{0},{1},{2},{3},{4},{5}',
           [t4050_types.String(), mupas_types.Integer(),
            _Constraints(mupas_types.Integer(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(t4050_types.String(),
                         is_mutable_variable=True, might_want_room_for=28)]),
-      f'R12JoyPrint': _extension_procedure(
-          f'R12JoyPrint', 'CAL "JPRINT",{0},{1},{2},{3},{4}',
+      'R12JoyPrint': _extension_procedure(
+          'R12JoyPrint', 'CAL "JPRINT",{0},{1},{2},{3},{4}',
           [t4050_types.String(), mupas_types.Integer(),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(t4050_types.String(),
                         is_mutable_variable=True, might_want_room_for=28)]),
-      f'R12JoyMove': _extension_procedure(
-          f'R12JoyMove', 'CAL "JMOVE",{0},{1},{2},{3},{4}',
+      'R12JoyMove': _extension_procedure(
+          'R12JoyMove', 'CAL "JMOVE",{0},{1},{2},{3},{4}',
           [_Constraints(t4050_types.String(), is_mutable_variable=True),
            mupas_types.Integer(),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(t4050_types.String(),
                         is_mutable_variable=True, might_want_room_for=28)]),
-      f'R12JoyRotate': _extension_procedure(
-          f'R12JoyRotate', 'CAL "JROTATE",{0},{1},{2},{3},{4},{5}',
+      'R12JoyRotate': _extension_procedure(
+          'R12JoyRotate', 'CAL "JROTATE",{0},{1},{2},{3},{4},{5}',
           [_Constraints(t4050_types.String(), is_mutable_variable=True),
            mupas_types.Integer(), mupas_types.Real(),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(t4050_types.String(),
                         is_mutable_variable=True, might_want_room_for=28)]),
-      f'R12JoyScale': _extension_procedure(
-          f'R12JoyScale', 'CAL "JSCALE",{0},{1},{2},{3},{4},{5},{6}',
+      'R12JoyScale': _extension_procedure(
+          'R12JoyScale', 'CAL "JSCALE",{0},{1},{2},{3},{4},{5},{6}',
           [_Constraints(t4050_types.String(), is_mutable_variable=True),
            mupas_types.Integer(), mupas_types.Real(), mupas_types.Real(),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(t4050_types.String(),
                         is_mutable_variable=True, might_want_room_for=28)]),
-      f'R12JoyShear': _extension_procedure(
-          f'R12JoyShear', 'CAL "JSHEAR",{0},{1},{2},{3},{4},{5},{6}',
+      'R12JoyShear': _extension_procedure(
+          'R12JoyShear', 'CAL "JSHEAR",{0},{1},{2},{3},{4},{5},{6}',
           [_Constraints(t4050_types.String(), is_mutable_variable=True),
            mupas_types.Integer(), mupas_types.Real(), mupas_types.Real(),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
            _Constraints(t4050_types.String(),
                         is_mutable_variable=True, might_want_room_for=28)]),
-      f'R12JoyTaper': _extension_procedure(
-          f'R12JoyTaper', 'CAL "JTAPER",{0},{1},{2},{3},{4},{5},{6}',
+      'R12JoyTaper': _extension_procedure(
+          'R12JoyTaper', 'CAL "JTAPER",{0},{1},{2},{3},{4},{5},{6}',
           [_Constraints(t4050_types.String(), is_mutable_variable=True),
            mupas_types.Integer(), mupas_types.Real(), mupas_types.Real(),
            _Constraints(mupas_types.Real(), can_be_lhs=True),
@@ -726,6 +728,7 @@ class _Constraints(mupas_types.Type):
       access_matches: The Expression's access attribute fullmatches this
           regular expression. (Kludgy!)
     """
+    self.wrapped = wrapped
     self.can_be_lhs = can_be_lhs or is_mutable_variable
     self.is_unqualified_variable = (
         is_unqualified_variable or is_mutable_variable)
@@ -738,9 +741,11 @@ class _Constraints(mupas_types.Type):
     text = []
     for k, v in self.__dict__.items():
       if isinstance(v, bool):
-        if v: text.append(k)
+        if v:
+          text.append(k)
       else:
-        if v is not None: text.append(f'{k}={v}')
+        if v is not None:
+          text.append(f'{k}={v}')
     return ','.join(text)
 
 
@@ -791,20 +796,22 @@ def _extension_procedure(
     A 4050 BASIC muPas extension that behaves like a procedure.
   """
   # Convert the template into a list if it's a bare string.
-  if isinstance(template, str): template = [template]
+  if isinstance(template, str):
+    template = [template]
   # Perform indentation of template strings if requested.
-  if indent: template = [f'      {t}' for t in template]
+  if indent:
+    template = [f'      {t}' for t in template]
 
   # See if the extension wishes for optional I/O address argument capability.
-  want_io, want_ioprimary = False, False
+  want_io_full, want_io_primary = False, False
   # Detect whether any template string contains {io} or {ioprimary} by doing
   # trial substitutions with a gibberish string. If the gibberish string is
   # present in a template to start out with, abandon such substitution.
   odd = r',$&"!@%!([)]beanS$'  # An unlikely string!
   no_oddness = not any(odd in t for t in template)
-  want_io = no_oddness and any(
+  want_io_full = no_oddness and any(
      odd in t.format(*range(50), io=odd, ioprimary='') for t in template)
-  want_ioprimary = no_oddness and any(
+  want_io_primary = no_oddness and any(
      odd in t.format(*range(50), io='', ioprimary=odd) for t in template)
 
   # Define the function that implements the extension.
@@ -814,26 +821,28 @@ def _extension_procedure(
     # If the extension wants I/O address capability, scrutinise any "extra"
     # first argument to see if it looks like an I/O address. If it does, save
     # the I/O address information in a form suitable for BASIC.
-    io, ioprimary = '', ''
+    io_full, io_primary = '', ''
     if (len(args) == len(arg_typeinfo) + 1 and
         isinstance(args[0].typeinfo, mupas_types.String) and
         args[0].is_literal):
-      io, ioprimary = _collect_io_address(
-          name, args[0], want_io, want_ioprimary)
+      io_full, io_primary = _collect_io_address(
+          name, args[0], want_io_full, want_io_primary)
     # We got an I/O address in the first argument, so delete it from the
     # argument list in preparation for conventional argument processing.
-    if io: args = args[1:]  # No pop() to avoid mutating args.
+    if io_full:
+      args = args[1:]  # No pop() to avoid mutating args.
 
     # Now back to conventional argument processing.
-    if len(arg_typeinfo) != len(args): raise Error(
-        f'{name} requires {len(arg_typeinfo)} argument(s), not {len(args)}')
+    if len(arg_typeinfo) != len(args):
+      raise Error(
+          f'{name} requires {len(arg_typeinfo)} argument(s), not {len(args)}')
     for expected, actual in zip(arg_typeinfo, args):
       _check_expression_compatibility(expected, actual)
     statements = [t4050_compiled.Statement(
         code=arg.compute, stack_growth=arg.stack_growth) for arg in args]
     statements.append(t4050_compiled.Statement(
         code=[t.format(*(arg.access for arg in args),
-                       io=io, ioprimary=ioprimary) for t in template]))
+                       io=io_full, ioprimary=io_primary) for t in template]))
     return t4050_compiled.chain_statements(statements)
 
   # Return the new extension.
@@ -869,12 +878,13 @@ def _try_several_extension_procedures(
   # arguments are the same length, and bundle the arguments together in
   # preparation for trying them all.
   num_extensions = len(templates)
-  if isinstance(indents, bool): indents = [indents] * num_extensions
+  if isinstance(indents, bool):
+    indents = [indents] * num_extensions
   assert num_extensions == len(arg_typeinfos) == len(indents)
   bundled_args = zip(itertools.repeat(name), templates, arg_typeinfos, indents)
 
   # Build each of the extensions.
-  extensions = [_extension_procedure(*args) for args in bundled_args]
+  built_extensions = [_extension_procedure(*args) for args in bundled_args]
 
   # Return an extension that tries all of the extensions in turn. If no success
   # with any of them, report all the errors encountered with each extension.
@@ -882,11 +892,11 @@ def _try_several_extension_procedures(
       args: list[t4050_compiled.Expression],
   ) -> t4050_compiled.Statement:
     errors: list[str] = []
-    for ext in extensions:
+    for ext in built_extensions:
       try:
         return ext.extension(args)
-      except (Error, t4050_types.TypeMismatch) as e:
-        errors.append(str(e))
+      except (Error, t4050_types.TypeMismatch) as exception:
+        errors.append(str(exception))
     else:
       errors_gallery = '\n   ' + '\n   '.join(errors)
       raise Error(
@@ -929,13 +939,14 @@ def _extension_function(
   def extension(
       args: list[t4050_compiled.Expression],
   ) -> t4050_compiled.Expression:
-      if len(arg_typeinfo) != len(args): raise Error(
+    if len(arg_typeinfo) != len(args):
+      raise Error(
           f'{name} requires {len(arg_typeinfo)} argument(s), not {len(args)}')
-      for expected, actual in zip(arg_typeinfo, args):
-        _check_expression_compatibility(expected, actual)
-      return t4050_compiled.Expression(
-          typeinfo=compute_result_typeinfo([a.typeinfo for a in args]),
-          access=template.format(*(arg.access for arg in args)))
+    for expected, actual in zip(arg_typeinfo, args):
+      _check_expression_compatibility(expected, actual)
+    return t4050_compiled.Expression(
+        typeinfo=compute_result_typeinfo([a.typeinfo for a in args]),
+        access=template.format(*(arg.access for arg in args)))
 
   # Return the new extension.
   return t4050_extensions.ExtensionFunctionSymbol(extension=extension)
@@ -970,7 +981,7 @@ def _try_several_extension_functions(
                      arg_typeinfos, compute_result_typeinfos)
 
   # Build each of the extensions.
-  extensions = [_extension_function(*args) for args in bundled_args]
+  built_extensions = [_extension_function(*args) for args in bundled_args]
 
   # Return an extension that tries all of the extensions in turn. If no success
   # with any of them, report all the errors encountered with each extension.
@@ -978,11 +989,11 @@ def _try_several_extension_functions(
       args: list[t4050_compiled.Expression],
   ) -> t4050_compiled.Expression:
     errors: list[str] = []
-    for ext in extensions:
+    for ext in built_extensions:
       try:
         return ext.extension(args)
-      except (Error, t4050_types.TypeMismatch) as e:
-        errors.append(str(e))
+      except (Error, t4050_types.TypeMismatch) as exception:
+        errors.append(str(exception))
     else:
       errors_gallery = '\n   ' + '\n   '.join(errors)
       raise Error(
@@ -1052,8 +1063,7 @@ def _relax_numeric(
     case mupas_types.Real():
       return mupas_types.Real()
     case _:
-      raise Error(
-          f'Internal error in _relax_numeric: {arg_typeinfo[0]}')
+      raise Error(f'Internal error in _relax_numeric: {arg_typeinfo[0]}')
 
 
 def _string(length: int) -> _TypeInfoComputer:
@@ -1113,9 +1123,9 @@ def _print_reals_to_address_procedure(
     # Check argument length.
     valid_num_args = ((num_reals + 1,) if default_primary_address is None else
                       (num_reals + 1, num_reals))
-    if len(args) not in valid_num_args: raise Error(
-        f'{name} can have {" or ".join(valid_num_args)} parameters, not '
-        f'{len(args)}')
+    if len(args) not in valid_num_args:
+      raise Error(f'{name} can have {" or ".join(valid_num_args)} parameters, '
+                  f'not {len(args)}')
 
     # Check and gather information for address.
     def address_fail():
@@ -1126,12 +1136,13 @@ def _print_reals_to_address_procedure(
 
     if len(args) == num_reals + 1:  # User did supply an address,
       arg, args = args[0], args[1:]  # No pop() to avoid mutating args.
-      if not isinstance(arg.typeinfo, mupas_types.String): address_fail()
-      m = re.fullmatch(f'"([@%]\d+)"', arg.access)
-      if not m:
+      if not isinstance(arg.typeinfo, mupas_types.String):
+        address_fail()
+      matched = re.fullmatch(r'"([@%]\d+)"', arg.access)
+      if not matched:
         address_fail()
       else:
-        primary_address = m.group(1)
+        primary_address = matched.group(1)
 
     else:  # User did not supply an address.
       assert isinstance(default_primary_address, str)  # mypy...
@@ -1198,7 +1209,8 @@ def _array_pair_procedure(
   # Here's an extension implementation that doesn't check for size agreement of
   # the two argument arrays.
   typeinfos: list[mupas_types.Type] = [typeinfo, typeinfo]
-  if extras is not None: typeinfos.extend(extras)
+  if extras is not None:
+    typeinfos.extend(extras)
   bare_extension = _extension_procedure(name, template, typeinfos, indent)
 
   # Here's the extension we'll return, which wraps the one we just made in
@@ -1212,9 +1224,9 @@ def _array_pair_procedure(
     x, y = args[-2].typeinfo, args[-1].typeinfo
     assert isinstance(x, (mupas_types.Array1d, mupas_types.Array2d))  # For
     assert isinstance(y, (mupas_types.Array1d, mupas_types.Array2d))  # mypy...
-    if array_num_elements(x) != array_num_elements(y): raise Error(
-        f'{name} requires both array arguments to have the same number '
-        'of elements.')
+    if array_num_elements(x) != array_num_elements(y):
+      raise Error(f'{name} requires both array arguments to have the same '
+                  'number of elements.')
     return statement
 
   # Return the new extension.
@@ -1266,7 +1278,8 @@ def _array_pair_scalar_function(
   # Here's an extension implementation that doesn't check for size agreement of
   # the two argument arrays.
   typeinfos: list[mupas_types.Type] = [typeinfo, typeinfo]
-  if extras is not None: typeinfos.extend(extras)
+  if extras is not None:
+    typeinfos.extend(extras)
   bare_extension = _extension_function(
       name, template, typeinfos, compute_result_typeinfo)
 
@@ -1281,9 +1294,9 @@ def _array_pair_scalar_function(
     x, y = args[-2].typeinfo, args[-1].typeinfo
     assert isinstance(x, (mupas_types.Array1d, mupas_types.Array2d))  # For
     assert isinstance(y, (mupas_types.Array1d, mupas_types.Array2d))  # mypy...
-    if array_num_elements(x) != array_num_elements(y): raise Error(
-        f'{name} requires both array arguments to have the same number '
-        'of elements.')
+    if array_num_elements(x) != array_num_elements(y):
+      raise Error(f'{name} requires both array arguments to have the same '
+                  'number of elements.')
     return expression
 
   # Return the new extension.
@@ -1295,9 +1308,9 @@ def _matrix_fill(
 ) -> t4050_compiled.Statement:
   """Extension for MatrixFill."""
   # There's a lot of argument checking for us to do first.
-  if len(args) < 1: raise Error(  # At least one parameter is required.
-      'MatrixFill takes a matrix to fill and a sequence of enough numeric '
-      'literals and constants to fill the matrix')
+  if len(args) < 1:  # At least one parameter is required.
+    raise Error('MatrixFill takes a matrix to fill and a sequence of enough '
+                'numeric literals and constants to fill the matrix')
   dest = args[0]
   _check_expression_compatibility(  # First parameter must be an array.
       _Constraints(
@@ -1307,14 +1320,14 @@ def _matrix_fill(
           is_mutable_variable=True), dest)
   assert isinstance(dest.typeinfo, (mupas_types.Array1d, mupas_types.Array2d))
   num_elements = array_num_elements(dest.typeinfo)
-  if len(args) - 1 != num_elements: raise Error(  # We need enough parameters.
-      'MatrixFill was asked to fill a matrix of size {num_elements} with '
-      '{len(args) - 1} items')
+  if len(args) - 1 != num_elements:  # We need enough parameters.
+    raise Error('MatrixFill was asked to fill a matrix of size {num_elements} '
+                'with {len(args) - 1} items')
   for element in args[1:]:  # Parameters must be the correct type.
     _check_expression_compatibility(dest.typeinfo.value_typeinfo, element)
-    if not element.is_literal: raise Error(
-        'MatrixFill can only fill a matrix with literal numeric values or '
-        'numeric value constants')
+    if not element.is_literal:
+      raise Error('MatrixFill can only fill a matrix with literal numeric '
+                  'values or numeric value constants')
 
   # At last we can build the code.
   literals = ' '.join(element.access for element in args[1:])
@@ -1331,9 +1344,9 @@ def _matrix_invert(
     args: list[t4050_compiled.Expression],
 ) -> t4050_compiled.Statement:
   """Extension for MatrixInvert."""
-  if len(args) not in (2, 3): raise Error(
-      'MatrixInvert takes two matrix variable parameters and an optional '
-      'numeric variable parameter for the determinant')
+  if len(args) not in (2, 3):
+    raise Error('MatrixInvert takes two matrix variable parameters and an '
+                'optional numeric variable parameter for the determinant')
   code: list[str] = []
   stack_growth = 0
 
@@ -1356,9 +1369,9 @@ def _matrix_invert(
       typeinfo_in, typeinfo_out)
   # Is the input matrix at least as wide as it is tall?
   rows, cols = array2d_dims(typeinfo_in)
-  if rows > cols: raise Error(
-     'Array arguments to MatrixInvert must be at least as wide as they are '
-     f'tall; this array is {rows}x{cols}, which is too tall')
+  if rows > cols:
+    raise Error('Array arguments to MatrixInvert must be at least as wide as '
+                f'they are tall; this array is {rows}x{cols} --- too tall')
   code.extend(args[0].compute)
   code.extend(args[1].compute)
   code.append(f'      {args[1].access}=INV {args[0].access}')
@@ -1379,8 +1392,8 @@ def _matrix_multiply(
     args: list[t4050_compiled.Expression],
 ) -> t4050_compiled.Statement:
   """Extension for MatrixMultiply."""
-  if len(args) != 3: raise Error(
-      'MatrixMultiply takes three matrix variable arguments')
+  if len(args) != 3:
+    raise Error('MatrixMultiply takes three matrix variable arguments')
 
   # Check matrix arguments.
   # Are parameters 1 and 2 array variables of reals? Is the third parameter a
@@ -1423,8 +1436,8 @@ def _matrix_transpose(
     args: list[t4050_compiled.Expression],
 ) -> t4050_compiled.Statement:
   """Extension for MatrixTranspose."""
-  if len(args) != 2: raise Error(
-      'MatrixTranspose takes two matrix variable arguments')
+  if len(args) != 2:
+    raise Error('MatrixTranspose takes two matrix variable arguments')
 
   # Check matrix arguments.
   # Are both parameters array variables? Is the second one mutable?
@@ -1443,8 +1456,8 @@ def _matrix_transpose(
   # Are the sizes correct?
   rows_r, cols_r = array2d_dims(typeinfo_r)
   rows_l, cols_l = array2d_dims(typeinfo_l)
-  if rows_l != cols_r or cols_l != rows_r: raise Error(
-      'Incompatible array sizes for MatrixTranspose')
+  if rows_l != cols_r or cols_l != rows_r:
+    raise Error('Incompatible array sizes for MatrixTranspose')
 
   # Generate code for matrix transpose.
   code = args[0].compute + args[1].compute + [
@@ -1458,9 +1471,9 @@ def _string_join(
     args: list[t4050_compiled.Expression],
 ) -> t4050_compiled.Statement:
   """Extension for StringJoin."""
-  if len(args) != 3: raise Error(
-      'StringJoin takes two string expression arguments and '
-      'a string variable destination')
+  if len(args) != 3:
+    raise Error('StringJoin takes two string expression arguments and '
+                'a string variable destination')
   # Are parameters 0 and 1 strings?
   _check_expression_compatibility(t4050_types.String(), args[0])
   _check_expression_compatibility(t4050_types.String(), args[1])
@@ -1505,11 +1518,12 @@ def _bit_procedure_bitstr_bitstr_bitstr(
     assert isinstance(args[2].typeinfo, mupas_types.String)
     param_max_length = max(args[0].typeinfo.length, args[1].typeinfo.length)
     destination_length = args[2].typeinfo.length
-    if destination_length < param_max_length: warnings.warn(
-        f'In call to {name}: the destination string with maximum length '
-        f'{destination_length} might be asked to store a result string of '
-        f'size {param_max_length}! Odd behaviour or program termination could '
-        'result')
+    if destination_length < param_max_length:
+      warnings.warn(
+          f'In call to {name}: the destination string with maximum length '
+          f'{destination_length} might be asked to store a result string of '
+          f'size {param_max_length}! Odd behaviour or program termination '
+          'could result')
     return statement
 
   # Return the new extension.
@@ -1520,8 +1534,9 @@ def _bitinvert(
     args: list[t4050_compiled.Expression],
 ) -> t4050_compiled.Statement:
   """Extenson for BitInvert."""
-  if len(args) != 2: raise Error(
-      'BitInvert parameters are an input string and an output string variable')
+  if len(args) != 2:
+    raise Error('BitInvert parameters are an input string and an output '
+                'string variable')
 
   # Check input arguments and generate bit complement statement.
   _check_expression_compatibility(t4050_types.String(), args[0])
@@ -1531,11 +1546,12 @@ def _bitinvert(
   typeinfo_out = args[1].typeinfo
   assert isinstance(typeinfo_in, mupas_types.String)  # mypy...
   assert isinstance(typeinfo_out, mupas_types.String)
-  if typeinfo_out.length < typeinfo_in.length: warnings.warn(
-      'In call to BitInvert: the destination string with maximum length '
-      f'{typeinfo_out.length} might be asked to store a result string of size '
-      f'{typeinfo_in.length}! Odd behaviour or program termination could '
-      'result')
+  if typeinfo_out.length < typeinfo_in.length:
+    warnings.warn(
+        'In call to BitInvert: the destination string with maximum length '
+        f'{typeinfo_out.length} might be asked to store a result string of '
+        f'size {typeinfo_in.length}! Odd behaviour or program termination '
+        'could result')
 
   # Create statement result.
   code = args[0].compute + args[1].compute + [
@@ -1554,9 +1570,10 @@ def _bitrotate_or_bitshift(
   def extension(
       args: list[t4050_compiled.Expression],
   ) -> t4050_compiled.Statement:
-    if len(args) != 3: raise Error(
-        f'{name} parameters are an input string, a numeric argument, and an '
-        'output string variable')
+    if len(args) != 3:
+      raise Error(
+          f'{name} parameters are an input string, a numeric argument, and an '
+          'output string variable')
 
     # Check parameters.
     _check_expression_compatibility(t4050_types.String(), args[0])
@@ -1568,22 +1585,24 @@ def _bitrotate_or_bitshift(
     typeinfo_out = args[2].typeinfo
     assert isinstance(typeinfo_in, mupas_types.String)  # mypy...
     assert isinstance(typeinfo_out, mupas_types.String)
-    if typeinfo_out.length < typeinfo_in.length: warnings.warn(
-        f'In call to {name}: the destination string with maximum length '
-        f'{typeinfo_out.length} might be asked to store a result string of '
-        f'size {typeinfo_in.length}! Odd behaviour or program termination '
-        'could result')
+    if typeinfo_out.length < typeinfo_in.length:
+      warnings.warn(
+          f'In call to {name}: the destination string with maximum length '
+          f'{typeinfo_out.length} might be asked to store a result string of '
+          f'size {typeinfo_in.length}! Odd behaviour or program termination '
+          'could result')
 
     # BITROT, but only BITROT and not BITSHI, can't have the same variable as
     # an input or an output argument. So we do a kludgy little check.
-    if bitrotate and args[0].access == args[2].access: raise Error(
-        f'In call to {name}: the destination string variable must not also be '
-        "used as the input string; don't know why, Tektronix just says so")
+    if bitrotate and args[0].access == args[2].access:
+      raise Error(
+          f'In call to {name}: the destination string variable must not also '
+          "be used as the input string; don't know why, Tektronix just says so")
 
     # Create statement result.
     call = 'BITROT' if bitrotate else 'BITSHI'
     code = args[0].compute + args[1].compute + [(
-        f'      CAL "{name}",'
+        f'      CAL "{call}",'
         f'{args[0].access},{args[1].access},{args[2].access}')]
     stack_growth = args[0].stack_growth + args[1].stack_growth
     return t4050_compiled.Statement(code=code, stack_growth=stack_growth)
@@ -1602,8 +1621,9 @@ def _rowsum_or_columnsum(
   def extension(
       args: list[t4050_compiled.Expression],
   ) -> t4050_compiled.Statement:
-    if len(args) != 2: raise Error(
-        f'{name} parameters are an input 2-D array and an output 1-D array')
+    if len(args) != 2:
+      raise Error(
+          f'{name} parameters are an input 2-D array and an output 1-D array')
 
     # Check parameters.
     _check_expression_compatibility(
@@ -1621,9 +1641,10 @@ def _rowsum_or_columnsum(
     rows_in, cols_in = array2d_dims(typeinfo_in)
     length_out = array1d_dims(typeinfo_out)
     output_dims_needed = rows_in if rowsum else cols_in
-    if output_dims_needed != length_out: raise Error(
-        f'In call to {name}: a {rows_in}x{cols_in} input array requires an '
-        f'output vector of length {output_dims_needed}, not {length_out}')
+    if output_dims_needed != length_out:
+      raise Error(
+          f'In call to {name}: a {rows_in}x{cols_in} input array requires an '
+          f'output vector of length {output_dims_needed}, not {length_out}')
 
     # Create statement result.
     command = 'RSUM' if rowsum else 'CSUM'
@@ -1644,8 +1665,8 @@ def _rowsum_or_columnsum(
 def _collect_io_address(
     name: str,
     param: t4050_compiled.Expression,
-    want_io: bool,
-    want_ioprimary: bool = False,
+    want_io_full: bool,
+    want_io_primary: bool = False,
 ) -> tuple[str, str]:
   """Attempt to collect a 4050 BASIC I/O address from an expression.
 
@@ -1658,38 +1679,41 @@ def _collect_io_address(
     name: Name of the extension or language feature dealing with the I/O
         address (if present).
     param: Expression to analyse for the presence of an I/O address.
-    want_io: Whether the caller wants a full I/O address if available. It's
-        assumed that the caller can tolerate a primary-only address.
-    want_ioprimary: Whether the caller wants exclusively a primary-only I/O
+    want_io_full: Whether the caller wants a full I/O address if available.
+        It's assumed that the caller can tolerate a primary-only address.
+    want_io_primary: Whether the caller wants exclusively a primary-only I/O
         address. If true, the presence of a secondary address will cause this
         function to raise an Error.
 
   Returns:
-    ('', '') if want_io or want_ioprimary are false or if the expression does
-    not appear to contain an I/O address. Otherwise, the first element is the
-    I/O address in param with a trailing colon (e.g. '%98,76:', '@54:'), and
-    the second is the same but omitting any secondary address (e.g. '%98:',
+    ('', '') if want_io_full or want_io_primary are false or if the expression
+    does not appear to contain an I/O address. Otherwise, the first element is
+    the I/O address in param with a trailing colon (e.g. '%98,76:', '@54:'),
+    and the second is the same but omitting any secondary address (e.g. '%98:',
     '@54:').
 
   Raises:
     Error: as described.
   """
-  io, ioprimary = '', ''
-  if want_io or want_ioprimary:
-    if m := _RE_IOADDRESS.fullmatch(param.access):
-      io, ioprimary = f'{m.group(1)}:', f'{m.group(2)}:'
+  io_full, io_primary = '', ''
+  if want_io_full or want_io_primary:
+    if matched := _RE_IOADDRESS.fullmatch(param.access):
+      io_full, io_primary = f'{matched.group(1)}:', f'{matched.group(2)}:'
       # Make sure the user only supplies a primary address if that's all
       # that's desired by the extension.
-      if want_ioprimary and io != ioprimary: raise Error(
-          f'A full I/O address was supplied to {name}, but {name} does not '
-          'accept secondary I/O addresses, only primary ones')
+      if want_io_primary and io_full != io_primary:
+        raise Error(
+            f'A full I/O address was supplied to {name}, but {name} does not '
+            'accept secondary I/O addresses, only primary ones')
 
-  return io, ioprimary
+  return io_full, io_primary
 
 
 def _check_expression_compatibility(
     expected: mupas_types.Type, actual: t4050_compiled.Expression,
 ):
+  # pylint: disable=too-many-branches  # you required them, pytype!
+
   # Carry out the extra checks that this function can perform, for expected
   # types wrapped in _Constraints objects.
   def constraint_fail():
@@ -1703,51 +1727,62 @@ def _check_expression_compatibility(
         f'has only {present} elements: your program might crash!')
 
   match expected:
-    case _Constraints():
-      if (
-          # Checks for values in mutable storage.
-          (expected.can_be_lhs and not actual.can_be_lhs) or
-          (expected.is_unqualified_variable and
-               not actual.is_unqualified_variable) or
-          # Kludgy access member pattern matching.
-          (expected.access_matches is not None and
-              not re.fullmatch(expected.access_matches, actual.access))):
-        # Fail if any of these violations is discovered.
-        constraint_fail()
+    case _Constraints(wrapped=wrapped):
+      # Carry out the "base" checks between the type wrapped in the constraint
+      # and the actual value.
+      t4050_types.check_assignment_or_parameter_compatibility(
+          expected=wrapped, actual=actual.typeinfo)
+
+      # Checks for values in mutable storage:
+      if expected.can_be_lhs:
+        if not actual.can_be_lhs:
+          constraint_fail()
+      if expected.is_unqualified_variable:
+        if not actual.is_unqualified_variable:
+          constraint_fail()
+      # Kludgy access member pattern matching.
+      if expected.access_matches is not None:
+        if not re.fullmatch(expected.access_matches, actual.access):
+          constraint_fail()
 
       # Type-specific checks.
       match actual.typeinfo:
         # Strings.
         case mupas_types.String(length=length):
           if expected.has_room_for is not None:
-            if length < expected.has_room_for: constraint_fail()
+            if length < expected.has_room_for:
+              constraint_fail()
           if expected.might_want_room_for is not None:
-            if length < expected.might_want_room_for: 
+            if length < expected.might_want_room_for:
               size_warning(length, expected.might_want_room_for)
           if expected.even_number_of_elements:
-            if length % 2: constraint_fail()
+            if length % 2:
+              constraint_fail()
 
         # 1-D arrays.
-        case mupas_types.Array1d(index_typeinfo=it, value_typeinfo=vt):
+        case mupas_types.Array1d():
           size = array_num_elements(actual.typeinfo)
           if expected.has_room_for is not None:
-            if size < expected.has_room_for: constraint_fail()
+            if size < expected.has_room_for:
+              constraint_fail()
           if expected.might_want_room_for is not None:
-            if size < expected.might_want_room_for: 
+            if size < expected.might_want_room_for:
               size_warning(size, expected.might_want_room_for)
           if expected.even_number_of_elements:
-            if size % 2: constraint_fail()
+            if size % 2:
+              constraint_fail()
 
         # 2-D arrays.
         case mupas_types.Array2d():
           size = array_num_elements(actual.typeinfo)
           if expected.even_number_of_elements:
-            if size % 2: constraint_fail()
+            if size % 2:
+              constraint_fail()
 
-  # Those extra checks have all passed, so now do the regular type
-  # compatibility checking.
-  t4050_types.check_assignment_or_parameter_compatibility(
-      expected=expected, actual=actual.typeinfo)
+    case _:
+      # The default of regular type compatibility checking.
+      t4050_types.check_assignment_or_parameter_compatibility(
+          expected=expected, actual=actual.typeinfo)
 
 
 def array1d_dims(typeinfo: mupas_types.Array1d) -> int:

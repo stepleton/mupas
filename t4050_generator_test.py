@@ -11,6 +11,7 @@ particular.
 This module is a rough record of the order in which certain code generation
 functionality has been implemented, more or less.
 """
+# pylint: disable=invalid-name  # for 's' as a shorthand for the stack array.
 
 import dataclasses
 import re
@@ -93,7 +94,8 @@ def parse_and_allocate_symbols(
 def get_node_by_type(ast: pascal_parser.AstNode, nodetype: type):
   """Retrieve an arbitrary note in ast that is an instance of nodetype."""
   def callback(ast: pascal_parser.AstNode, _):
-    if isinstance(ast, nodetype): raise mupas_descent.Stop(ast)
+    if isinstance(ast, nodetype):
+      raise mupas_descent.Stop(ast)
   return mupas_descent.depth_first(callback, ast, None)
 
 
@@ -110,11 +112,12 @@ class LabelScanner:
     label_regex = re.compile(r'[A-Z_a-z]\w*:')
     self.labels = [c[:-1] for c in code if label_regex.fullmatch(c)]
 
-  def nth_match(self, regex: str, n: int):
+  def nth_match(self, regex: str, label_number: int):
     """Return the n'th label (n > 0) matching regex or raise a ValueError."""
-    for l in self.labels:
-      if re.match(regex, l):
-        if (n := n - 1) <= 0: return l
+    for label in self.labels:
+      if re.match(regex, label):
+        if (label_number := label_number - 1) <= 0:
+          return label
     else: raise ValueError(f'Failed to find a label matching {regex}')
 
 
@@ -124,6 +127,13 @@ class LabelScanner:
 
 
 class T4050GeneratorTest(unittest.TestCase):
+  """Test harness for testing the mupas_analyses module.
+
+  Reflecting bad practice, this class basically became an integration test for
+  the entire t4050 backend. I'd say this is T*D* to fix but then I'd get the
+  linter on my case :-P
+  """
+  # pylint: disable=too-many-public-methods
 
   def test_unsigned_integer_in_expression(self):
     """The first and most basic test: can we compile an unsigned integer?"""
@@ -1406,7 +1416,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'GO TO |{label_fortop_1}|',   # Jump to top of loop.
          f'{label_forend_1}:',      # Loop exit.
          '_Exit_ForAgain_DoIt:',    # "DoIt" subroutine exit label.
-         f'RET',                    # Return to caller.
+         'RET',                     # Return to caller.
 
          f'{label_end_1}:',         # Program exit point.
          f'DEL {s}',                # Delete the stack.

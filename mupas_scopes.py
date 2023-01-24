@@ -33,11 +33,10 @@ import mupas_types
 import mupas_resources
 import pascal_parser
 
-from typing import Generic, Iterator, Mapping, Optional, Protocol, Sequence
-from typing import TypeVar
+from typing import Iterator, Optional, Protocol, Sequence, TypeVar
 
 
-T = TypeVar('T')
+T = TypeVar('T')  # pylint: disable=invalid-name
 
 
 _UNBOUND = '<unbound>'
@@ -47,10 +46,19 @@ _UNBOUND = '<unbound>'
 
 
 class ScopeProtocol(Protocol[T]):
+  """A protocol describing the Scope interface.
+
+  Use of this protocol (maybe?) sidesteps the (soon-to-be-corrected) inability
+  of pytype to handle recursive types. In practice, we only expect `Scope` to
+  implement this protocol. For documentation on what the instance variables and
+  methods are for, consult the `Scope` definition.
+  """
   name: str
   path: str
   parent: Optional['ScopeProtocol[T]']
   bindings: dict[str, T]
+
+  # pylint: disable=missing-function-docstring
 
   def __setitem__(self, name: str, item: T):
     ...
@@ -82,7 +90,16 @@ class ScopeProtocol(Protocol[T]):
 
 
 class BiScopeProtocol(ScopeProtocol[T]):
+  """A protocol describing the BiScope interface.
+
+  Use of this protocol (maybe?) sidesteps the (soon-to-be-corrected) inability
+  of pytype to handle recursive types. In practice, we only expect `BiScope` to
+  implement this protocol. For documentation on what the instance variables and
+  methods are for, consult the `BiScope` definition.
+  """
   children: dict[str, 'BiScopeProtocol[T]']
+
+  # pylint: disable=missing-function-docstring
 
   @contextlib.contextmanager
   def nest(self, name: str) -> Iterator['BiScopeProtocol[T]']:
@@ -117,23 +134,23 @@ class Scope(ScopeProtocol[T]):
   bindings: dict[str, T]
 
   def __init__(self, name: str, parent: Optional[ScopeProtocol] = None):
-    if '/' in name: raise ValueError(
-        f'Scope name "{name}" includes illegal character \'/\'')
+    if '/' in name:
+      raise ValueError(f'Scope name "{name}" includes illegal character \'/\'')
     self.name = name
     self.path = f'/{name}' if parent is None else f'{parent.path}/{name}'
     self.parent = parent
     self.bindings = {}
 
   def __setitem__(self, name: str, item: T):
-    if name in self.bindings: raise KeyError(
-        f'Symbol {name} is already bound in {self.path}')
+    if name in self.bindings:
+      raise KeyError(f'Symbol {name} is already bound in {self.path}')
     self.bindings[name] = item
 
   def __getitem__(self, name: str) -> T:
     try:
       return self._getitem_rec(name, self.path)
-    except KeyError as e:
-      raise e.with_traceback(None)
+    except KeyError as key_error:
+      raise key_error.with_traceback(None)
 
   def _getitem_rec(self, name:str, original_path: str) -> T:
     if name in self.bindings:
@@ -160,10 +177,11 @@ class Scope(ScopeProtocol[T]):
     """Retrieve the Unix-like path to an item in this scope."""
     try:
       return self._itempath_rec(name, self.path)
-    except KeyError as e:
-      raise e.with_traceback(None)
+    except KeyError as key_error:
+      raise key_error.with_traceback(None)
 
   def _itempath_rec(self, name: str, original_path: str) -> str:
+    # pylint: disable=protected-access  # no recursion, pylint??
     if name in self.bindings:
       return f'{self.path}/{name}'
     elif self.parent is None:
@@ -175,10 +193,11 @@ class Scope(ScopeProtocol[T]):
     """If name is in the Nth parent scope to this scope, return N."""
     try:
       return self._itemhops_rec(name, self.path)
-    except KeyError as e:
-      raise e.with_traceback(None)
+    except KeyError as key_error:
+      raise key_error.with_traceback(None)
 
   def _itemhops_rec(self, name: str, original_path: str) -> int:
+    # pylint: disable=protected-access  # no recursion, pylint??
     if name in self.bindings:
       return 0
     elif self.parent is None:
@@ -211,7 +230,8 @@ class BiScope(Scope[T], BiScopeProtocol[T]):
   def __init__(self, name: str, parent: Optional[BiScopeProtocol[T]] = None):
     super().__init__(name, parent)
     self.children = {}
-    if parent is not None: parent.add_child(name, self)
+    if parent is not None:
+      parent.add_child(name, self)
 
   @contextlib.contextmanager
   def nest(self, name: str) -> Iterator[BiScopeProtocol[T]]:
@@ -224,14 +244,14 @@ class BiScope(Scope[T], BiScopeProtocol[T]):
 
   def add_child(self, name: str, child: BiScopeProtocol[T]):
     """Add a child to this scope. Does not ensure this object is its parent."""
-    if name in self.children: raise KeyError(
-      f'{self.path} already has a child scope called {name}')
+    if name in self.children:
+      raise KeyError(f'{self.path} already has a child scope called {name}')
     self.children[name] = child
 
   def del_child(self, name: str):
     """Deletes a child from this scope."""
-    if name not in self.children: raise KeyError(
-      f'{self.path} has no child scope called {name} to delete')
+    if name not in self.children:
+      raise KeyError(f'{self.path} has no child scope called {name} to delete')
     del self.children[name]
 
   def get_scope(self, path: str) -> BiScopeProtocol[T]:
@@ -240,13 +260,14 @@ class BiScope(Scope[T], BiScopeProtocol[T]):
     # treated as relative paths even if they begin with '/'.
     parts = [p for p in path.split('/') if p]
     try:
-      if parts.pop(0) != self.name: raise KeyError
+      if parts.pop(0) != self.name:
+        raise KeyError
       scope: BiScopeProtocol[T] = self
-      for p in parts:
-        scope = scope.children[p]
+      for part in parts:
+        scope = scope.children[part]
       return scope
     except KeyError:
-        raise KeyError(f'No scope {path} within {self.name}') from None
+      raise KeyError(f'No scope {path} within {self.name}') from None
 
 
 ### Instantiations of nested scopes ###
@@ -351,7 +372,7 @@ class ExtensionSymbol(Symbol):
   Pascal standard procedures and functions by invoking their BASIC analogues.
 
   Because extensions are target-specific, there's not much we can do here
-  besides be an empty superclass. 
+  besides be an empty superclass.
   """
 
 
@@ -398,9 +419,9 @@ def symbol_table_text(symbols: SymbolScopeProtocol) -> Sequence[str]:
 
   # Now list the non-extension bindings defined in this scope.
   for k in sorted(symbols.bindings):
-    v = symbols.bindings[k]
-    if not isinstance(v, ExtensionSymbol):
-      text.append(f'  {k.ljust(name_width)}{v}')
+    bound = symbols.bindings[k]
+    if not isinstance(bound, ExtensionSymbol):
+      text.append(f'  {k.ljust(name_width)}{bound}')
 
   # Recursively append the representations of child scopes.
   for kid in sorted(symbols.children):

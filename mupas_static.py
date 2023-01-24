@@ -55,19 +55,15 @@ class Allocator(abc.ABC):
   @abc.abstractmethod
   def allocate(self, mupas_type: mupas_types.Type) -> Value:
     """Claim an unused resource for a static value of a certain type."""
-    pass
 
   @abc.abstractmethod
   def release(self, resource: Value):
     """Indicate that a static value resource is no longer used."""
-    pass
 
   @abc.abstractmethod
   def init_info(self, resource: Value) -> InitInfo:
     """Retrieve information about initialising a static value resource."""
-    pass
 
   @abc.abstractmethod
   def delete_info(self, resource: Value) -> DeleteInfo:
     """Retrieve information about how to retire a static value resource."""
-    pass

@@ -25,6 +25,7 @@ def parse_and_get_quoted_constants(
 
 
 class MupasAnalysesTest(unittest.TestCase):
+  """Test harness for testing the mupas_analyses module."""
 
   def test_get_symbols(self):
     """get_symbols() is capable of retrieving symbols."""
@@ -196,7 +197,8 @@ class MupasAnalysesTest(unittest.TestCase):
 
     call_graph = mupas_analyses.get_call_graph(ast, scope)
     self.assertEqual(
-        {'/Goose': {'/Goose/Brady', '/Goose/Kevin', '/Goose/Billy', '/Goose/Ernie'},
+        {'/Goose': {'/Goose/Brady', '/Goose/Kevin',
+                    '/Goose/Billy', '/Goose/Ernie'},
          '/Goose/Ralph': set(),
          '/Goose/Frank': {'/Goose/Ralph'},
          '/Goose/Brady': {'/Goose/Frank'},

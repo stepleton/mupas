@@ -1236,3 +1236,32 @@ def asdict_rec(ast):
       return name
   else:
     return ast
+
+
+if __name__ == '__main__':
+  import argparse
+  import pprint
+  import preprocessor
+
+  # Minimal flags so the user can specify an input source
+  flags = argparse.ArgumentParser(
+      description='Lisa Pascal/Clascal parser',
+      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  flags.add_argument('source', nargs='?', default='-',
+                     help=('Program source code file to parse; omit to read '
+                           'source from standard input'),
+                     type=argparse.FileType('r'))
+  parsed_flags = flags.parse_args()
+
+  # Preprocess the input source
+  preprocessed_source_text, quoted_constants, units = (
+      preprocessor.preprocess(parsed_flags.source.read()))
+  # Parse the preprocessed input
+  ast = parse(preprocessed_source_text)
+  # Print the abstract syntax tree
+  print('######## UNITS ########')
+  pprint.pprint(units)
+  print('######## QUOTED CONSTANTS ########')
+  pprint.pprint(quoted_constants)
+  print('######## PARSE TREE ########')
+  pprint.pprint(asdict_rec(ast))

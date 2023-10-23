@@ -188,7 +188,7 @@ def program(
     code.extend(['      ORG 1', f'      GO TO |{program_origin_label}|'])
   code.extend([f'      ORG {options.origin}',
                f'{program_origin_label}:',
-               '      INIT'])
+               '      INI'])
 
   # First order of business: define string constants by sticking them into
   # string variables. Even if the scope of the constants is local, they are
@@ -578,6 +578,16 @@ def sta_procedure(
         raise RuntimeError('For 4050 BASIC, Exit takes no parameters.')
       code = [f'      GO TO |_Exit{symbols.path.replace("/", "_")}|']
 
+    # For Randomize: assign the result of RND(-1) to the first unused position
+    # on the stack, since we have to do something with it even though we don't
+    # want it or use it.
+    case t4050_extensions.ExtensionRandomizeSymbol():
+      if parameters:
+        raise RuntimeError('For 4050 BASIC, Randomize takes no parameters.')
+      stack = frame.allocator.stack_resource.variable_name
+      sp = frame.allocator.stack_pointer_resource.variable_name
+      code = [f'      {stack}[{sp}]=RND(-1)']
+
     case _:
       raise RuntimeError(
           f'Attempt to call {ast.call.binding}, which is a {type(symbol)}, '
@@ -633,7 +643,7 @@ def sta_if(
     statements = [
         t4050_compiled.Statement(code=compiled_condition.compute),  # growth: 0!
         t4050_compiled.Statement(code=[
-            f'      IF {compiled_condition.access} THEN |{then_label}|']),
+            f'      IF {compiled_condition.access} THE |{then_label}|']),
         t4050_compiled.Statement(code=stack_pop_code)]
 
     # Add further alternative code if it exists, then the GOTO to jump past the
@@ -665,7 +675,7 @@ def sta_if(
               code=compiled_condition.compute,
               stack_growth=compiled_condition.stack_growth),
           t4050_compiled.Statement(code=[
-              f'      IF NOT {compiled_condition.access} THEN |{out_label}|']),
+              f'      IF NOT {compiled_condition.access} THE |{out_label}|']),
           sta_statement(
               ast.consequent, symbols, frame, quoted_constants, labels),
           t4050_compiled.Statement(code=[f'{out_label}:'])])
@@ -680,7 +690,7 @@ def sta_if(
               code=compiled_condition.compute,
               stack_growth=compiled_condition.stack_growth),
           t4050_compiled.Statement(code=[
-              f'      IF {compiled_condition.access} THEN |{then_label}|']),
+              f'      IF {compiled_condition.access} THE |{then_label}|']),
           sta_statement(
               ast.alternative, symbols, frame, quoted_constants, labels),
           t4050_compiled.Statement(code=[f'      GO TO |{out_label}|',
@@ -730,7 +740,7 @@ def sta_case(
       tests.append(f'{compiled_selector.access}={constant_value}')
     # Create the "jump table" IF statement for this case.
     statements.append(t4050_compiled.Statement(
-        code=[f'      IF {" OR ".join(tests)} THEN |{case_label}|']))
+        code=[f'      IF {" OR ".join(tests)} THE |{case_label}|']))
 
   # Generate the "otherwise" clause, if present; either way, include a general
   # fall-through past the end of the case statement.
@@ -846,14 +856,14 @@ def sta_for(
     with symbols.substitute(**{ast.control_variable: substitute}):
 
       # Now we can implement the FOR loop.
-      step = f' STEP {ast.step}' if ast.step != 1 else ''
+      step = f' STE {ast.step}' if ast.step != 1 else ''
       code.append(t4050_compiled.Statement(code=[
           f'      FOR {control_variable}={compiled_initial.access} TO '
           f'{compiled_final.access}{step}']))
       code.append(sta_statement(
           ast.body, symbols, frame, quoted_constants, labels))
       code.append(
-          t4050_compiled.Statement(code=[f'      NEXT {control_variable}']))
+          t4050_compiled.Statement(code=[f'      NEX {control_variable}']))
 
   # Regrettably (or maybe not!), we can't use the native FOR loop; let's roll
   # our own.
@@ -867,7 +877,7 @@ def sta_for(
     code.append(t4050_compiled.Statement(code=[
         f'      {control_variable}={compiled_initial.access}',
         f'{top_label}:',
-        f'      IF {control_variable}{compare}{compiled_final.access} THEN '
+        f'      IF {control_variable}{compare}{compiled_final.access} THE '
         f'|{end_label}|']))
     # Execute the loop body.
     code.append(sta_statement(
@@ -914,7 +924,7 @@ def sta_repeat(
   # At the bottom of the loop, decide whether to loop once more.
   statements.append(t4050_compiled.Statement(code=(
       compiled_condition.compute +
-      [f'      IF {compiled_condition.access} THEN |{end_label}|'] +
+      [f'      IF {compiled_condition.access} THE |{end_label}|'] +
       stack_pop_code +
       [f'      GO TO |{top_label}|',
        f'{end_label}:'] +
@@ -950,7 +960,7 @@ def sta_while(
       t4050_compiled.Statement(code=(
           [f'{top_label}:'] +
           compiled_condition.compute +
-          [f'      IF NOT {compiled_condition.access} THEN |{end_label}|'] +
+          [f'      IF NOT {compiled_condition.access} THE |{end_label}|'] +
           stack_pop_code)),
       # Here's the loop body itself.
       sta_statement(ast.body, symbols, frame, quoted_constants, labels),
@@ -977,7 +987,7 @@ def sta_label_and_statement(
     except KeyError:
       raise RuntimeError(f'Attempt to define label {ast.label}, which was not '
                          'declared') from None
-    label = labels.generate('Label', symbols, ast.label)
+    label = labels[ast.label].name
     statements.append(t4050_compiled.Statement(code=[f'{label}:']))
 
   if ast.statement is not None:
@@ -1378,7 +1388,7 @@ def exp_expression_binary(
   elif ast.op == pascal_parser.BinaryOp.DIVIDE_TO_INT:
     access = f'(INT({left}/{right}))'
   elif ast.op == pascal_parser.BinaryOp.MODULO:
-    access = f'({left}-(INT({left}/{right})))'
+    access = f'({left}-({right}*INT({left}/{right})))'
   else:
     raise _InternalError
 

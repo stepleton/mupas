@@ -58,7 +58,7 @@ import pascal_parser
 from typing import Collection, Optional, Mapping, MutableSequence, Sequence
 
 
-__version__ = 'muPas compiler 0.1 circa January 2023'
+__version__ = 'muPas compiler 0.2 circa October 2023'
 
 
 def _define_flags():

@@ -210,6 +210,7 @@ def assemble(source: Sequence[str]) -> bytes:
     "Compiled" BASIC code, ready for use with 4050-series machines.
   """
   # pylint: disable=too-many-branches,too-many-nested-blocks  # A fair cop.
+  # pylint: disable=too-many-statements  # This too I guess.
 
   # NOMENCLATURE NOTE: In this function, "num" is a variable that holds the
   # current line number of the source code input, and "line_number" refers to
@@ -232,8 +233,11 @@ def assemble(source: Sequence[str]) -> bytes:
           )?              # But it may not be present at all.
           \s*             # Then we match any remaining whitespace.""",
       re.VERBOSE)
-  label_regex = re.compile(  # What makes a valid label?
+  label_regex = re.compile(  # What makes a valid ordinary label?
       r'[a-zA-Z_]\w*',  # Non-empty alphanumeric with a non-numeric first char.
+      re.ASCII)         # No unicode.
+  label_udk_regex = re.compile(  # What makes a valid User Defined Key label?
+      r'@Key(\d+)',     # The string '@Key' followed by digits.
       re.ASCII)         # No unicode.
 
   for num, line in enumerate(source):
@@ -242,7 +246,8 @@ def assemble(source: Sequence[str]) -> bytes:
     assert matched is not None             # So this is for mypy.
     label, statement = matched.groups()
     # If a label is defined here, check its validity.
-    if label and not label_regex.fullmatch(label):
+    if label and not (
+        label_regex.fullmatch(label) or label_udk_regex.fullmatch(label)):
       raise ValueError(f'Illegal label on line {num}: "{label}"')
     labels_and_statements.append((label, statement))
 
@@ -256,6 +261,11 @@ def assemble(source: Sequence[str]) -> bytes:
     # Associating line numbers to labels is the easy part, since any label we
     # see now takes the line number carefully computed further on below.
     if label is not None:
+      matched = label_udk_regex.fullmatch(label)
+      if matched is not None:
+        key_line_number = 4 * int(matched.group(1))
+        line_numbers_and_statements.append(
+            (num, key_line_number, f'GO TO |{label}|'))
       label_to_line_number[label] = numberer.next_line_number
 
     # Determining the next label may depend on whether there is an ORG or INC
@@ -271,7 +281,7 @@ def assemble(source: Sequence[str]) -> bytes:
   quote_regex = re.compile(  # For extracting string constants from lines.
       r'(?:[^"]+|"[^"]*")')  # "-free runs, or runs surrounded by ".
   label_regex = re.compile(  # For extracting label invocations from line parts.
-      r'(?:[^\|]+|\|[\w]+\|)')   # Runs surrounded by |, or anything else.
+      r'(?:[^\|]+|\|[@\w]+\|)')   # Runs surrounded by |, or anything else.
 
   for num, line_number, statement in line_numbers_and_statements:
     if statement.count('"') % 2:
@@ -309,6 +319,7 @@ def assemble(source: Sequence[str]) -> bytes:
     line_numbers_and_final_statements.append((line_number, final_statement))
 
   ### Step 4: The rest of the classic assembler "second pass": generate code.
+  line_numbers_and_final_statements.sort()  # Sort lines by line number.
   code_parts: list[bytes] = [
     f'{line_number} {statement}'.encode('ASCII')
     for line_number, statement in line_numbers_and_final_statements]

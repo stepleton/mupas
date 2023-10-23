@@ -72,9 +72,9 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
       'Ord': _extension_function(  # TODO: Correct this for integer ranges?
           'Ord', '{0}', [mupas_types.Ordinal()], _integer),
       'Pred': _extension_function(
-          'Pred', '{0}-1', [mupas_types.Ordinal()], lambda tis: tis[0]),
+          'Pred', '({0}-1)', [mupas_types.Ordinal()], lambda tis: tis[0]),
       'Succ': _extension_function(
-          'Succ', '{0}+1', [mupas_types.Ordinal()], lambda tis: tis[0]),
+          'Succ', '({0}+1)', [mupas_types.Ordinal()], lambda tis: tis[0]),
 
       # Environmental control.
       'AlphaRotate':
@@ -102,7 +102,7 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
           'UseCrLf', 'PRI @37,26:{0}', [mupas_types.Boolean()]),
       'SetCustomIODelimiters': _extension_procedure(
           'SetCustomIODelimiters', 'PRI @37,0:{0},{1},{2}',
-          [mupas_types.IntegerSubrange(0, 255)]),
+          [mupas_types.Char()]),
       'SetDegrees': _extension_procedure('SetDegrees', 'SET DEG', []),
       'SetRadians': _extension_procedure('SetRadians', 'SET RAD', []),
       'SetGrads': _extension_procedure('SetGrads', 'SET GRA', []),
@@ -110,6 +110,13 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
       'SetKey': _extension_procedure('SetKey', 'SET KEY', []),
       'SetNoKey': _extension_procedure('SetNoKey', 'SET NOK', []),
       'SetNoTrace': _extension_procedure('SetNoTrace', 'SET NOR', []),
+
+      # User-defined key definition: use with caution! It's so hinky that we
+      # write it in a way that makes it look scary.
+      'USER_DEFINED_KEY_VECTOR__': _extension_procedure(
+          'USER_DEFINED_KEY_VECTOR__', '@Key{0}',
+          [_Constraints(mupas_types.Integer(), is_literal=True)],
+          indent=False),  # Defines a label!
 
       # System control operations.
       'Call': _try_several_extension_procedures(
@@ -140,10 +147,12 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
           'Read',
           ['INP {io}' + ','.join('{%d}' % a for a in range(i))
            for i in range(1, 21)],
-          [[_Constraints(mupas_types.Type(), is_mutable_variable=True)] * i
+          [[_Constraints(mupas_types.Type(), can_be_lhs=True)] * i
            for i in range(1, 21)]),
-      'Write': _write_factory(newline=False),
-      'WriteLn': _write_factory(newline=True),
+      'Write': _write_factory(newline=False, with_format_arg=False),
+      'WriteLn': _write_factory(newline=True, with_format_arg=False),
+      'WriteUsing': _write_factory(newline=False, with_format_arg=True),
+      'WriteLnUsing': _write_factory(newline=True, with_format_arg=True),
 
       # Scalar math operations.
       'Abs': _extension_function(
@@ -166,7 +175,7 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
           'Ln', 'LOG({0})', [mupas_types.ScalarNumber()], _real),
       'Pi': _extension_function('Pi', 'PI', [], _real),
       'Sign': _extension_function(
-          'Sign', 'SGN', [mupas_types.ScalarNumber()],
+          'Sign', 'SGN({0})', [mupas_types.ScalarNumber()],
           _integer_subrange(-1, 1)),
       'Sin': _extension_function(
           'Sin', 'SIN({0})', [mupas_types.ScalarNumber()], _real),
@@ -174,6 +183,13 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
           'Sqrt', 'SQRT({0})', [mupas_types.ScalarNumber()], _real),
       'Tan': _extension_function(
           'Tan', 'TAN({0})', [mupas_types.ScalarNumber()], _real),
+
+      # Power. This is a temporary scalar-only extension that should be
+      # replaced someday with a version that captures the full range of types
+      # that the 4050's exponentiation operator supports.
+      'Power': _extension_function(
+          'Power', '({0}^{1})',
+          [mupas_types.ScalarNumber(), mupas_types.ScalarNumber()], _real),
 
       # Matrix math operations.
       'MatrixFill': t4050_extensions.ExtensionProcedureSymbol(_matrix_fill),
@@ -264,10 +280,9 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
           'Ascii',
           ['ASC({0})', 'ASC({0},{1})'],  # 2-param form is for A-series only.
           [[t4050_types.String()],
-           [t4050_types.String(), mupas_types.Integer()]],
-          _integer_subrange(0, 255)),
+           [t4050_types.String(), mupas_types.Integer()]], _char),
       'Chr': _extension_function(
-          'Chr', 'CHR({0})', [mupas_types.IntegerSubrange(0, 255)], _string(1)),
+          'Chr', 'CHR({0})', [mupas_types.Char()], _string(1)),
       'Length': _extension_function(
           'Length', 'LEN({0})', [mupas_types.String(0x10000)], _integer),
       'StringJoin': t4050_extensions.ExtensionProcedureSymbol(_string_join),
@@ -304,21 +319,20 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
 
       # 4050 BASIC built-in random number generator.
       'Rand': _extension_function('Rand', 'RND(1)', [], _real),
-      'Randomize': _extension_function('Randomize', 'RND(-1)', [], _real),
+      'Randomize': t4050_extensions.ExtensionRandomizeSymbol(),
       'Native4050Rnd': _extension_function(
           'Native4050Rnd', 'RND({0})', [mupas_types.ScalarNumber()], _real),
 
       # A-model enhancements not defined elsewhere.
-      'Dash': _extension_procedure(
-          'Dash', 'DAS {0}', [mupas_types.IntegerSubrange(0, 255)]),
+      'Dash': _extension_procedure('Dash', 'DAS {0}', [mupas_types.Char()]),
       'Alter': _extension_procedure(
           'Alter', 'ALT {0},{1}',
           [t4050_types.String(),
            _Constraints(t4050_types.String(), is_mutable_variable=True)]),
       'Angle': _extension_function(
           'Angle', 'ANG({0},{1})', [mupas_types.Real()] * 2, _real),
-      'ArcTan2': _extension_function(  # an alias for POSIX fans...
-          'ArcTan2', 'ANG({0},{1})', [mupas_types.Real()] * 2, _real),
+      'ArcTan2': _extension_function(  # an alias for POSIX fans; note order!
+          'ArcTan2', 'ANG({1},{0})', [mupas_types.Real()] * 2, _real),
       'Area': _array_pair_scalar_function(
           'Area', 'ARE({0},{1})', mupas_types.Real(), _real),
       'BitAnd': _bit_procedure_bitstr_bitstr_bitstr('BitAnd', 'BITAND'),
@@ -691,9 +705,11 @@ class _Constraints(mupas_types.Type):
   These constraints are not carefully organised --- they've been introduced
   as needs have emerged. Some apply only to specific types.
   """
+  # pylint: disable=too-many-instance-attributes  # It's an option container!
   wrapped: mupas_types.Type
   can_be_lhs: bool
   is_unqualified_variable: bool
+  is_literal: bool
   has_room_for: Optional[int] = None
   might_want_room_for: Optional[int] = None
   even_number_of_elements: bool
@@ -706,10 +722,11 @@ class _Constraints(mupas_types.Type):
       can_be_lhs: bool = False,
       is_unqualified_variable: bool = False,
       is_mutable_variable: bool = False,
+      is_literal: bool = False,
       has_room_for: Optional[int] = None,
       might_want_room_for: Optional[int] = None,
       even_number_of_elements: bool = False,
-      access_matches: Optional[str] = None
+      access_matches: Optional[str] = None,
   ):
     """Initialise a _Constraints.
 
@@ -718,6 +735,7 @@ class _Constraints(mupas_types.Type):
       can_be_lhs: Same as t4050_compiled.Expression.can_be_lhs.
       is_unqualified_variable: Same as in t4050_compiled.Expression.
       is_mutable_variable: Shorthand for can_be_lhs and is_unqualified_variable.
+      is_literal: Same as t4050_compiled.is_literal.
       has_room_for: (String, Array1d) Does the string or array have at least
           this many elements? (The name anticipates using this for variables.)
           If it doesn't, it's a fatal error.
@@ -732,6 +750,7 @@ class _Constraints(mupas_types.Type):
     self.can_be_lhs = can_be_lhs or is_mutable_variable
     self.is_unqualified_variable = (
         is_unqualified_variable or is_mutable_variable)
+    self.is_literal = is_literal
     self.has_room_for = has_room_for
     self.might_want_room_for = might_want_room_for
     self.even_number_of_elements = even_number_of_elements
@@ -1021,6 +1040,12 @@ def _integer(arg_typeinfo: list[mupas_types.Type]) -> mupas_types.Integer:
   return mupas_types.Integer()
 
 
+def _char(arg_typeinfo: list[mupas_types.Type]) -> mupas_types.Char:
+  """Ignores argument types; designates return types as Char."""
+  del arg_typeinfo  # Unused.
+  return mupas_types.Char()
+
+
 def _integer_subrange(lower_bound: int, upper_bound: int) -> _TypeInfoComputer:
   """Ignores argument types; designates return types as IntegerSubrange."""
 
@@ -1083,13 +1108,18 @@ def _string(length: int) -> _TypeInfoComputer:
 ##########################################
 
 
-def _write_factory(newline: bool) -> t4050_extensions.ExtensionProcedureSymbol:
+def _write_factory(
+    newline: bool,
+    with_format_arg: bool,
+) -> t4050_extensions.ExtensionProcedureSymbol:
   """Extension factory for Write and WriteLn."""
   name = 'WriteLn' if newline else 'Write'
+  formatting = 'USI {0}:' if with_format_arg else ''
   final_semicolon = '' if newline else ';'
   return _try_several_extension_procedures(
     name,
-    ['PRI {io}' + ';'.join('{%d}' % a for a in range(i)) + final_semicolon
+    ['PRI {io}' + formatting +
+     ';'.join('{%d}' % a for a in range(with_format_arg, i)) + final_semicolon
      for i in range(21)],
     [[t4050_types.Union(t4050_types.String(), mupas_types.ScalarNumber())] * i
      for i in range(21)])
@@ -1489,7 +1519,7 @@ def _string_join(
                    might_want_room_for=max_room_needed), args[2])
   return t4050_compiled.Statement(
       code=args[0].compute + args[1].compute + [
-          f'{args[2].access}={args[0].access}&{args[1].access}'],
+          f'      {args[2].access}={args[0].access}&{args[1].access}'],
       stack_growth=args[0].stack_growth)
 
 
@@ -1739,6 +1769,9 @@ def _check_expression_compatibility(
           constraint_fail()
       if expected.is_unqualified_variable:
         if not actual.is_unqualified_variable:
+          constraint_fail()
+      if expected.is_literal:
+        if not actual.is_literal:
           constraint_fail()
       # Kludgy access member pattern matching.
       if expected.access_matches is not None:

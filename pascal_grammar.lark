@@ -294,12 +294,14 @@ dereference_or_read_symbol: "^"
 //// [RM] CHAPTER 5 ////
 
 // page 5-1
-?factor: factor_qualified_binding_reference_or_call
+// factor_not appears before factor_qualified_binding_reference_or_call so that
+// NOT (...) doesn't get mistaken for a call to a function called NOT.
+?factor: factor_not
+       | factor_qualified_binding_reference_or_call
        | factor_unsigned_constant
        | factor_set_constructor
        | "(" expression ")"
        | factor_address_of
-       | factor_not
 factor_qualified_binding_reference_or_call: qualified_binding_reference_or_call
 factor_set_constructor: set_constructor
 factor_unsigned_constant: unsigned_constant

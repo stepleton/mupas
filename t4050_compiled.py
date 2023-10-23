@@ -40,7 +40,13 @@ class Expression:
         `compute` attribute. This code is expected to be used inline in larger
         BASIC expressions and statements. We can't say how often this
         expression will be evaluated, so it shouldn't grow (or even alter) the
-        stack.
+        stack. In principle, this expression should NOT have side effects when
+        evaluated, though that may be permissible in some places as a matter
+        of taste (e.g. advancing the state of a pseudorandom number generator).
+        If there are side-effects that absolutely must occur as a consequence
+        of evaluating an expression (that is, they must not be optimised away
+        under any circumstances), they ought to be carried out by code in the
+        `compute` attribute.
     compute: BASIC code that should be executed first in order to calculate the
         value of a muPas expression. This code makes sense only in the context
         of surrounding code: for example, if the expression is a function call,

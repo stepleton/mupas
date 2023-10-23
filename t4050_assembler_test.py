@@ -94,6 +94,19 @@ class T4050AssemblerTest(unittest.TestCase):
     result = t4050_assembler.assemble(code)
     self.assertEqual(result, b'10 GO TO 20\r20 A=1+2\r\r')
 
+  def test_user_defined_key(self):
+    """Test labels that define jumps from user-defined keys."""
+    code = [
+        '        A=1+2',
+        '@Key2:  PRI "Hello!"',
+        '        B=A*A']
+    result = t4050_assembler.assemble(code)
+    self.assertEqual(result, '\r'.join([
+        '8 GO TO 20',
+        '10 A=1+2',
+        '20 PRI "Hello!"',
+        '30 B=A*A']).encode('ASCII') + b'\r\r')
+
   def test_optimiser(self):
     """Test assembly code optimisation."""
     code = [

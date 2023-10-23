@@ -9,10 +9,10 @@ muPas is:
 - a barely-defined subset of the [Pascal programming language](
   https://en.wikipedia.org/wiki/Pascal_(programming_language)).
 - a compiler (or perhaps a ["transpiler"](
-  https://en.wikipedia.org/w/index.php?title=Transpiler) that converts programs
-  written in muPas to a dialect of BASIC used by [Tektronix 4050-series](
-  https://en.wikipedia.org/wiki/Tektronix_4050) vector storage tube graphical
-  workstations.
+  https://en.wikipedia.org/w/index.php?title=Transpiler)) that converts
+  programs written in muPas to a dialect of BASIC used by
+  [Tektronix 4050-series](https://en.wikipedia.org/wiki/Tektronix_4050) vector
+  storage tube graphical workstations.
 
 The muPas compiler was written in a hurry so that its author, a BASIC-phobic
 programmer who prefers GOTOs to remain in assembly language where they belong,

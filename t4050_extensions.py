@@ -84,3 +84,18 @@ class ExtensionExitSymbol(mupas_scopes.ExtensionSymbol):
   """
   def __init__(self):
     super().__init__(definition=pascal_parser.Extension())
+
+
+@dataclasses.dataclass
+class ExtensionRandomizeSymbol(mupas_scopes.ExtensionSymbol):
+  """A value for binding Randomize in the root symbol table.
+
+  ExtensionRandomizeSymbol is not like ordinary extensions: instead, it's
+  simply a marker that lets t4050_generator.sta_procedure know that the user
+  has called Randomize. When sta_procedure sees this marker, it generates
+  custom code that works around the fact that 4050 BASIC requires the return
+  value from RND(-1) to be used somehow --- an annoyance since Randomize is a
+  procedure, not a function.
+  """
+  def __init__(self):
+    super().__init__(definition=pascal_parser.Extension())

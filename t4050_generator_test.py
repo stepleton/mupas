@@ -494,15 +494,15 @@ class T4050GeneratorTest(unittest.TestCase):
     # Now compare generated code against the "assembly" output we expect.
     self.assertEqual(
         [c.strip() for c in comp.code],
-        [f'IF NOT (1>2) THEN |{label_endif_1}|',  # Jump UNLESS condition holds.
-         f'{variable_name}=123',                  # Consequent.
-         f'{label_endif_1}:',                     # Target to jump to.
-         f'IF (1>3) THEN |{label_then_1}|',       # Jump IF condition holds.
-         f'{variable_name}=456',                  # Alternative.
-         f'GO TO |{label_endif_2}|',              # Go past consequent.
-         f'{label_then_1}:',                      # Target to jump to.
-         f'{variable_name}=123',                  # Consequent.
-         f'{label_endif_2}:'])                    # End of IF statement.
+        [f'IF NOT (1>2) THE |{label_endif_1}|',  # Jump UNLESS condition holds.
+         f'{variable_name}=123',                 # Consequent.
+         f'{label_endif_1}:',                    # Target to jump to.
+         f'IF (1>3) THE |{label_then_1}|',       # Jump IF condition holds.
+         f'{variable_name}=456',                 # Alternative.
+         f'GO TO |{label_endif_2}|',             # Go past consequent.
+         f'{label_then_1}:',                     # Target to jump to.
+         f'{variable_name}=123',                 # Consequent.
+         f'{label_endif_2}:'])                   # End of IF statement.
 
   def test_statements_that_grow_the_stack(self):
     """Will we clean up after statements that grow the stack?"""
@@ -539,7 +539,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{fp}={s}[{fp}-2]',     # Restore old frame pointer after call.
          f'{sp}={sp}-2',          # Leave the result on the stack.
 
-         f'IF {s}[{fp}] THEN |{label_then_1}|',  # Jump if condition.
+         f'IF {s}[{fp}] THE |{label_then_1}|',  # Jump if condition.
 
          f'{sp}={sp}-1',          # Alternative. Pop condition off stack.
          f'{variable_name}=123',  # Alternative body.
@@ -615,12 +615,12 @@ class T4050GeneratorTest(unittest.TestCase):
          'GOS |_SubEnter_RepeatsALot_Five|',  # Call condition function.
          f'{fp}={s}[{fp}-2]',           # Restore old frame pointer after call.
          f'{sp}={sp}-2',                # Leave the result on the stack.
-         f'IF {s}[{fp}] THEN |{label_end_1}|',  # Leave if condition is true.
+         f'IF {s}[{fp}] THE |{label_end_1}|',   # Leave if condition is true.
          f'{sp}={sp}-1',                # Else, pop condition result off stack.
          f'GO TO |{label_top_2}|',      # Go back to repeat inner loop.
          f'{label_end_1}:',             # Off-ramp for the inner loop.
          f'{sp}={sp}-1',                # Pop condition result off stack.
-         f'IF 1 THEN |{label_end_2}|',  # Leave outer loop if condition is true.
+         f'IF 1 THE |{label_end_2}|',   # Leave outer loop if condition is true.
          f'GO TO |{label_top_1}|',      # Wasn't, so repeat outer loop.
          f'{label_end_2}:'])            # Repeat statement exit.
 
@@ -658,7 +658,7 @@ class T4050GeneratorTest(unittest.TestCase):
     self.assertEqual(
         [c.strip() for c in comp.code],
         [f'{label_top_1}:',         # Outer loop top.
-         f'IF NOT 1 THEN |{label_end_2}|',  # If condition not met, skip out.
+         f'IF NOT 1 THE |{label_end_2}|',   # If condition not met, skip out.
          f'{variable_name}=123',    # Outer loop body first statement.
          f'{label_top_2}:',         # Inner loop top.
          f'{sp}={sp}+3',            # Advance stack pointer to parameters.
@@ -668,7 +668,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GOS |_SubEnter_WhilesALot_Five|',  # Call condition function.
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-2',            # Leave the result on the stack.
-         f'IF NOT ({s}[{fp}]-4) THEN |{label_end_1}|',  # Exit inner if unmet.
+         f'IF NOT ({s}[{fp}]-4) THE |{label_end_1}|',   # Exit inner if unmet.
          f'{sp}={sp}-1',            # Otherwise, pop result off the stack.
          f'{variable_name}=456',    # Inner loop body.
          f'GO TO |{label_top_2}|',  # Back to top of the inner loop.
@@ -719,8 +719,8 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{sp}={sp}-2',            # Leave the result on the stack.
 
          f'IF {s}[{fp}]=1 OR {s}[{fp}]=2 OR {s}[{fp}]=3 OR {s}[{fp}]=4 '
-         f'THEN |{label_case_1}|',  # Where to jump for the first case.
-         f'IF {s}[{fp}]=5 THEN |{label_case_2}|',  # Where for the second case.
+         f'THE |{label_case_1}|',   # Where to jump for the first case.
+         f'IF {s}[{fp}]=5 THE |{label_case_2}|',  # Where for the second case.
 
          f'{sp}={sp}-1',            # Pop condition result off the stack.
          f'{variable_name}=789',    # Otherwise case body.
@@ -788,7 +788,7 @@ class T4050GeneratorTest(unittest.TestCase):
          f'{fp}={s}[{fp}-2]',       # Restore old frame pointer after call.
          f'{sp}={sp}-4',            # Pop everything off the stack.
 
-         f'IF 0 THEN |{label_end_1}|',  # Leave loop if condition is true.
+         f'IF 0 THE |{label_end_1}|',   # Leave loop if condition is true.
          f'GO TO |{label_top_1}|',  # Wasn't, so repeat loop.
          f'{label_end_1}:'])        # Repeat statement exit.
 
@@ -814,7 +814,7 @@ class T4050GeneratorTest(unittest.TestCase):
         [c.strip() for c in comp.code],
         [f'FOR {i_name}=1 TO 10',
          f'{bar_name}={i_name}',
-         f'NEXT {i_name}'])
+         f'NEX {i_name}'])
 
   def test_for_statement_that_uses_native_for_backwards(self):
     """Can we compile FOR statements that using native FOR, again?"""
@@ -836,9 +836,9 @@ class T4050GeneratorTest(unittest.TestCase):
     # Now compare generated code against the "assembly" output we expect.
     self.assertEqual(
         [c.strip() for c in comp.code],
-        [f'FOR {i_name}=10 TO 1 STEP -1',
+        [f'FOR {i_name}=10 TO 1 STE -1',
          f'{bar_name}={i_name}',
-         f'NEXT {i_name}'])
+         f'NEX {i_name}'])
 
   def test_call_with_local_variable(self):
     """Can we compile calls to subroutines with local variables?"""
@@ -894,7 +894,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_Empty|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Empty:',         # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -938,7 +938,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_Basic|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Basic:',         # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -1009,7 +1009,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_SoSo|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_SoSo:',          # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -1092,7 +1092,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_WithStrings|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_WithStrings:',   # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {hithere_name}(11)',   # Dimension string constant "a".
          f'DIM {worlds_name}(7)',     # Dimension string constant "b".
          f'{hithere_name}="""Hi there"" "',  # Define string constant "a".
@@ -1155,7 +1155,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_VarOnStack|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_VarOnStack:',    # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -1234,7 +1234,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_Nesty|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Nesty:',         # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -1315,7 +1315,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_Returney|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Returney:',      # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -1388,7 +1388,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_ForAgain|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_ForAgain:',      # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -1410,7 +1410,7 @@ class T4050GeneratorTest(unittest.TestCase):
          '_SubEnter_ForAgain_DoIt:',  # "DoIt" subroutine implementation.
          f'{s}[{fp}]=1',            # For loop preparation: set initial value.
          f'{label_fortop_1}:',      # Top of the for loop.
-         f'IF {s}[{fp}]>10 THEN |{label_forend_1}|',  # Time to exit loop?
+         f'IF {s}[{fp}]>10 THE |{label_forend_1}|',   # Time to exit loop?
          f'{variable_name}={s}[{fp}]',  # Loop body: assign to bar.
          f'{s}[{fp}]={s}[{fp}]+1',  # Increment control variable.
          f'GO TO |{label_fortop_1}|',   # Jump to top of loop.
@@ -1468,7 +1468,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_Scopey|',   # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_Scopey:',        # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -1570,7 +1570,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_ExtraSubs|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_ExtraSubs:',     # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -1617,6 +1617,7 @@ class T4050GeneratorTest(unittest.TestCase):
           InternalTapeParams(TRUE, FALSE, 3 > 4);
           SetGrads;
           Exit;
+          Randomize;
           Call('EDITOR',123);
           NumToStr(64+971.2, str);
           Axis('@16', 20, 20);
@@ -1664,7 +1665,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'GO TO |_Program_ExtensionUser|',  # Preamble 3: Jump to origin.
          'ORG 100',                 # Preamble 4: Define origin.
          '_Program_ExtensionUser:',   # Preamble 5: Origin label.
-         'INIT',                    # Reset the interpreter.
+         'INI',                     # Reset the interpreter.
          f'DIM {s}(100)',           # Allocate a 100-element stack.
          f'{sp}=1',                 # Set the stack pointer to 1.
          f'{fp}=1',                 # Set the frame pointer to 1.
@@ -1679,6 +1680,7 @@ class T4050GeneratorTest(unittest.TestCase):
          'PRI @33,0:1,0,(3>4)',     # The InternalTapeParams statement.
          'SET GRA',                 # The SetGrads statement.
          'GO TO |_Exit_ExtensionUser|',   # The Exit statement.
+         f'{s}[{sp}]=RND(-1)',      # The Randomize statement.
          'CAL "EDITOR",123',        # The Call statement.
          f'{str_name}=STR (64+971.2)',  # The NumToStr statement.
          'AXI @16:20,20',           # The Axis statement.

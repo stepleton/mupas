@@ -25,4 +25,12 @@ change the definition of `kR12MusicCall` as documented in the global CONST
 section of `fourspite.pas`.
 
 
+Nobody owns Fourspite
+---------------------
+
+Fourspite and any supporting programs, software libraries, and documentation
+distributed alongside it are released into the public domain without any
+warranty. See the [LICENSE](../../LICENSE) file for details.
+
+
 -- _[Tom Stepleton](mailto:stepleton@gmail.com), 22 November 2023, St. Louis_

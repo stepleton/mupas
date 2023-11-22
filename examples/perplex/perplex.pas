@@ -1,4 +1,4 @@
-{ Mystify -- a cooperative line-bounce screensaver for two 4050-series machines
+{ Perplex -- a cooperative line-bounce screensaver for two 4050-series machines
 
   Forfeited into the public domain with NO WARRANTY. Read LICENSE for details.
 
@@ -15,7 +15,7 @@
   will begin. Use the BREAK key on both machines to exit the program.
 
   This program is a bit repetitive to avoid expensive procedure calls. }
-PROGRAM Mystify;
+PROGRAM Perplex;
 
 
 CONST

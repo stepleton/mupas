@@ -137,7 +137,8 @@ def extensions() -> dict[str, mupas_scopes.ExtensionSymbol]:
 
       # Execution control.
       'Halt': _extension_procedure('Halt', 'STO', []),  # Keeps all prog. state.
-      'End': _extension_procedure('End', 'END', []),    # Clears some state.
+      'EndProgram': _extension_procedure(               # Clears some state.
+          'EndProgram', 'END', []),
       'Exit': t4050_extensions.ExtensionExitSymbol(),
 
       # Interrupts aren't handled by extensions yet.

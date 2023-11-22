@@ -20,7 +20,7 @@ emulator.
 
 **NOTE:** For systems with the R12 ROM, Fourspite is configured for use with
 Tektronix 4051 computers. To change for 4052 or 4054 systems with R12, either
-change the string "MUSAKT" to "MUSIC" on line 210 of the compiled program, or
+change the string "MUZAKT" to "MUSIC" on line 210 of the compiled program, or
 change the definition of `kR12MusicCall` as documented in the global CONST
 section of `fourspite.pas`.
 
